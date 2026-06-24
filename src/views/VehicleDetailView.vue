@@ -1,0 +1,280 @@
+<script setup>
+import { ref, computed, inject, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { Icon } from '@iconify/vue'
+import VehicleImageGallery from '../components/VehicleImageGallery.vue'
+import UpfitterPromo from '../components/UpfitterPromo.vue'
+import { vehicleDetailFields, formatDetailValue, formatPrice } from '../data/vehicles.js'
+import { fetchUpfitterProfile } from '../data/dealer.js'
+import { useVehicleSelection } from '../composables/useVehicleSelection.js'
+
+const props = defineProps({
+  id: {
+    type: String,
+    required: true,
+  },
+})
+
+const catalog = inject('catalog')
+const router = useRouter()
+const upfitterProfile = ref(null)
+const { isSelected, toggleSelection } = useVehicleSelection()
+
+onMounted(async () => {
+  upfitterProfile.value = await fetchUpfitterProfile()
+})
+
+const vehicle = computed(() => catalog.value.find((v) => v.id === props.id))
+
+const detailRows = computed(() => {
+  if (!vehicle.value) return []
+  return vehicleDetailFields.map((field) => ({
+    label: field.label,
+    value: formatDetailValue(vehicle.value, field),
+  }))
+})
+
+function goBack() {
+  router.push({ name: 'inventory' })
+}
+</script>
+
+<template>
+  <div v-if="vehicle" class="detail page-content page-content--narrow">
+    <button type="button" class="detail__back" @click="goBack">
+      <Icon icon="mdi:arrow-left" width="18" height="18" aria-hidden="true" />
+      Back to inventory
+    </button>
+
+    <div class="detail__header">
+      <div>
+        <h1 class="detail__title">{{ vehicle.title }}</h1>
+        <p class="detail__meta">{{ vehicle.year }} · {{ vehicle.make }}</p>
+        <p class="detail__price">
+          <span class="detail__price-amount">{{ formatPrice(vehicle.preUpfitPrice) }}</span>
+          <span class="detail__price-label">Pre-upfit pricing</span>
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="detail__select-btn"
+        :class="{ 'detail__select-btn--selected': isSelected(vehicle.id) }"
+        @click="toggleSelection(vehicle.id)"
+      >
+        {{ isSelected(vehicle.id) ? 'Remove from quote list' : 'Add to quote list' }}
+      </button>
+    </div>
+
+    <div class="detail__layout">
+      <div class="detail__left">
+        <div class="detail__media">
+          <VehicleImageGallery :images="vehicle.imageUrls" :alt="vehicle.title" />
+
+          <span
+            class="detail__badge"
+            :class="vehicle.status === 'available' ? 'detail__badge--available' : 'detail__badge--hold'"
+          >
+            {{ vehicle.status === 'available' ? 'AVAILABLE' : 'ON HOLD' }}
+          </span>
+        </div>
+
+        <section class="detail__specs-section" aria-labelledby="vehicle-specs-heading">
+          <h2 id="vehicle-specs-heading" class="detail__specs-heading">Vehicle details</h2>
+
+          <table class="detail__table">
+            <tbody>
+              <tr v-for="row in detailRows" :key="row.label">
+                <th scope="row">{{ row.label }}</th>
+                <td>{{ row.value }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+
+      <UpfitterPromo v-if="upfitterProfile" :profile="upfitterProfile" />
+      
+    </div>
+  </div>
+
+  <div v-else class="page-content page-content--narrow">
+    <p class="detail__missing">Vehicle not found.</p>
+    <RouterLink to="/">Return to inventory</RouterLink>
+  </div>
+</template>
+
+<style scoped>
+.detail__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: var(--space-lg);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text);
+  padding: 0;
+}
+
+.detail__back:hover {
+  text-decoration: underline;
+}
+
+.detail__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.detail__title {
+  margin: 0 0 var(--space-xs);
+  font-size: 1.75rem;
+  font-weight: 800;
+}
+
+.detail__meta {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.detail__price {
+  margin: var(--space-sm) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.detail__price-amount {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+
+.detail__price-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.detail__layout {
+  display: flex;
+  gap: var(--space-2xl);
+  align-items: start;
+}
+
+.detail__left {
+  display: flex;
+  flex-direction: column;
+  min-width: 65%;
+}
+
+.detail__media {
+  position: relative;
+}
+
+.detail__badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0.5rem 1.25rem;
+  font-size: 14px;
+  font-weight: 700;
+  border-bottom-right-radius: 3px;
+  z-index: 1;
+}
+
+.detail__badge--available {
+  background: var(--color-available);
+}
+
+.detail__badge--hold {
+  background: var(--color-on-hold);
+}
+
+.detail__specs-section {
+  background: var(--color-bg-card);
+  color: #fff;
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  margin-top: var(--space-xl);
+}
+
+.detail__specs-heading {
+  margin: 0 0 var(--space-lg);
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+.detail__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.detail__table th,
+.detail__table td {
+  padding: 0.75rem 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.detail__table tr:last-child th,
+.detail__table tr:last-child td {
+  border-bottom: none;
+}
+
+.detail__table th {
+  width: 42%;
+  padding-right: var(--space-lg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.detail__table td {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.detail__select-btn {
+  background: var(--brand-color);
+  color: var(--color-text-inverse);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  padding: 1rem 2rem;
+  border-radius: var(--radius-sm);
+  transition: opacity var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.detail__select-btn--selected {
+  background: transparent;
+  color: var(--color-text);
+  border: 2px solid var(--color-primary);
+}
+
+.detail__select-btn:hover {
+  opacity: 0.85;
+}
+
+.detail__missing {
+  font-size: var(--text-lg);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 900px) {
+  .detail__layout {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .detail__table th {
+    width: 45%;
+  }
+}
+</style>

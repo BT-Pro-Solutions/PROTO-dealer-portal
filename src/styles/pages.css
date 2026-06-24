@@ -1,0 +1,8 @@
+.page-content {
+  max-width: var(--content-wide-max);
+  margin: 0 auto;
+}
+
+.page-content--narrow {
+  max-width: var(--content-narrow-max);
+}
