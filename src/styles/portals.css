@@ -1,0 +1,11 @@
+[data-portal='dealer'] {
+  --brand-color: #c41230;
+}
+
+[data-portal='upfitter'] {
+  --brand-color: #c41230;
+}
+
+[data-portal='admin'] {
+  --brand-color: #1a1a1a;
+}

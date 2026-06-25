@@ -207,8 +207,11 @@ function openDetail(id) {
 }
 
 .vehicle-grid-section__view-btn--active {
-  background: #fff;
-  color: #000;
+  background: #000;
+  color: #fff;
+  &:hover {
+    color: #fff;
+  }
 }
 
 .vehicle-grid-section__sort {

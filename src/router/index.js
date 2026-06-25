@@ -1,17 +1,27 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { isAuthenticated } from '../composables/useAuth.js'
+import {
+  isAuthenticated,
+  getActivePortal,
+  portalHomeRoute,
+  portalLoginRoute,
+} from '../composables/useAuth.js'
 import { dealerRoutes } from './dealer.js'
+import { upfitterRoutes } from './upfitter.js'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      redirect: () =>
-        isAuthenticated() ? { name: 'dealer-inventory' } : { name: 'dealer-login' },
+      redirect: () => {
+        const portal = getActivePortal()
+        if (portal) return portalHomeRoute(portal)
+        return { name: 'dealer-login' }
+      },
     },
     ...dealerRoutes,
-    // Future portal routes: upfitterRoutes, adminRoutes
+    ...upfitterRoutes,
+    // Future portal routes: adminRoutes
   ],
   scrollBehavior(to) {
     if (to.hash) {
@@ -26,14 +36,19 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const authed = isAuthenticated()
+  const portal = to.meta.portal ?? getActivePortal()
+  const authed = portal ? isAuthenticated(portal) : isAuthenticated()
 
-  if (to.meta.requiresAuth && !authed) {
-    return { name: 'dealer-login' }
+  if (to.meta.requiresAuth && portal && !isAuthenticated(portal)) {
+    return portalLoginRoute(portal)
   }
 
-  if (to.meta.guestOnly && authed) {
-    return { name: 'dealer-inventory' }
+  if (to.meta.guestOnly && portal && isAuthenticated(portal)) {
+    return portalHomeRoute(portal)
+  }
+
+  if (to.meta.requiresAuth && !portal && !authed) {
+    return { name: 'dealer-login' }
   }
 })
 

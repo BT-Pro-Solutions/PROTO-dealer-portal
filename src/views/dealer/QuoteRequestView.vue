@@ -9,6 +9,7 @@ import { useQuoteDraft } from '../../composables/useQuoteDraft.js'
 import { useDealerQuotes } from '../../composables/useDealerQuotes.js'
 
 const catalog = inject('catalog')
+const session = inject('session')
 const router = useRouter()
 const upfitter = ref(null)
 const submitting = ref(false)
@@ -63,7 +64,10 @@ async function handleSubmit() {
   try {
     const payload = buildPayload(selectedIdsList.value)
     const result = await submitQuoteRequest(payload)
-    await registerQuote(payload, catalog.value, result.requestId)
+    await registerQuote(payload, catalog.value, result.requestId, {
+      id: 'jasper-truck-sales',
+      name: session.value.dealershipName,
+    })
     submitted.value = true
     clearSelection()
     clearAllInstructions()

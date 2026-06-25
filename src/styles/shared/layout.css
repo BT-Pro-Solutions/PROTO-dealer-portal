@@ -1,0 +1,31 @@
+.portal-layout {
+  min-height: 100vh;
+  background: var(--color-bg-muted);
+}
+
+.portal-layout__sticky-sentinel {
+  height: 1px;
+  margin-bottom: -1px;
+  pointer-events: none;
+}
+
+.portal-layout__header-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.portal-layout__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-size: var(--text-lg);
+  color: var(--color-text-muted);
+}
+
+.portal-layout__main {
+  background: var(--color-bg);
+  padding: var(--space-sm) var(--content-padding) var(--space-2xl);
+  min-height: calc(100vh - var(--header-height) - var(--swoop-height));
+}

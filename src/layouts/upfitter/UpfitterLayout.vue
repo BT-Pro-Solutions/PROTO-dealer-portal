@@ -1,30 +1,32 @@
 <script setup>
-import { ref, onMounted, onUnmounted, provide, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, provide, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import AppHeader from '../../components/AppHeader.vue'
+import UpfitterHeader from '../../components/upfitter/UpfitterHeader.vue'
 import AppFooter from '../../components/AppFooter.vue'
 import HeaderSwoop from '../../components/HeaderSwoop.vue'
-import { fetchDealerSession } from '../../data/dealer.js'
-import { fetchVehicles } from '../../data/vehicles.js'
+import { fetchUpfitterSession } from '../../data/upfitter.js'
 import { signOut } from '../../composables/useAuth.js'
 
 const router = useRouter()
 
 const session = ref(null)
-const catalog = ref([])
 const loading = ref(true)
 const headerStuck = ref(false)
 const stickySentinel = ref(null)
 
 provide('session', session)
-provide('catalog', catalog)
 
 let stickyObserver = null
 
+function applyBrandColor(color) {
+  if (color) {
+    document.documentElement.style.setProperty('--brand-color', color)
+  }
+}
+
 onMounted(async () => {
-  const [sessionData, vehicleData] = await Promise.all([fetchDealerSession(), fetchVehicles()])
-  session.value = sessionData
-  catalog.value = vehicleData
+  session.value = await fetchUpfitterSession()
+  applyBrandColor(session.value?.brandColor)
   loading.value = false
 
   await nextTick()
@@ -40,24 +42,29 @@ onMounted(async () => {
   }
 })
 
+watch(
+  () => session.value?.brandColor,
+  (color) => applyBrandColor(color),
+)
+
 onUnmounted(() => {
   stickyObserver?.disconnect()
 })
 
 function handleLogout() {
-  signOut('dealer')
-  router.push({ name: 'dealer-login' })
+  signOut('upfitter')
+  router.push({ name: 'upfitter-login' })
 }
 </script>
 
 <template>
-  <div class="portal-layout" data-portal="dealer">
-    <div v-if="loading" class="portal-layout__loading">Loading inventory…</div>
+  <div class="portal-layout" data-portal="upfitter">
+    <div v-if="loading" class="portal-layout__loading">Loading portal…</div>
 
     <template v-else-if="session">
       <div ref="stickySentinel" class="portal-layout__sticky-sentinel" aria-hidden="true"></div>
       <div class="portal-layout__header-sticky reveal reveal--down">
-        <AppHeader :session="session" :stuck="headerStuck" @logout="handleLogout" />
+        <UpfitterHeader :session="session" :stuck="headerStuck" @logout="handleLogout" />
       </div>
       <HeaderSwoop class="reveal reveal--fade reveal--delay-1" />
 
@@ -71,4 +78,3 @@ function handleLogout() {
     </template>
   </div>
 </template>
-

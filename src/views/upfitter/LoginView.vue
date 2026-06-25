@@ -14,13 +14,13 @@ function handleSubmit() {
   if (submitting.value) return
 
   submitting.value = true
-  signIn('dealer')
-  router.push({ name: 'dealer-inventory' })
+  signIn('upfitter')
+  router.push({ name: 'upfitter-dashboard' })
 }
 </script>
 
 <template>
-  <div class="portal-login" data-portal="dealer">
+  <div class="portal-login" data-portal="upfitter">
     <div class="portal-login__panel reveal reveal--down">
       <img
         src="/assets/Dealer-Logo.svg"
@@ -30,26 +30,26 @@ function handleSubmit() {
         height="80"
       />
 
-      <h1 class="portal-login__title">Dealer Portal</h1>
-      <p class="portal-login__subtitle">Sign in to browse inventory and request quotes.</p>
+      <h1 class="portal-login__title">Upfitter Portal</h1>
+      <p class="portal-login__subtitle">Sign in to manage dealerships, quotes, and portal users.</p>
 
       <form class="portal-login__form" novalidate @submit.prevent="handleSubmit">
         <div class="portal-login__field">
-          <label class="portal-login__label" for="login-email">Email</label>
+          <label class="portal-login__label" for="upfitter-login-email">Email</label>
           <input
-            id="login-email"
+            id="upfitter-login-email"
             v-model="email"
             type="text"
             class="portal-login__input"
             autocomplete="username"
-            placeholder="you@dealership.com"
+            placeholder="you@zoresco.example"
           />
         </div>
 
         <div class="portal-login__field">
-          <label class="portal-login__label" for="login-password">Password</label>
+          <label class="portal-login__label" for="upfitter-login-password">Password</label>
           <input
-            id="login-password"
+            id="upfitter-login-password"
             v-model="password"
             type="password"
             class="portal-login__input"

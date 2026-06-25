@@ -1,0 +1,66 @@
+:root {
+  /* Brand & surfaces */
+  --color-bg: #ffffff;
+  --color-bg-muted: #f0f1f3;
+  --color-bg-card: #222;
+  --color-bg-search: #f0f1f3;
+  --color-bg-pill: #ededed;
+  --color-bg-pill-active: #121212;
+
+  /* Text */
+  --color-text: #1a1a1a;
+  --color-text-muted: #525252;
+  --color-text-inverse: #ffffff;
+
+  /* Status badges */
+  --color-available: #caffdd;
+  --color-on-hold: #ffdada;
+  --color-pending: #fff3cd;
+  --color-pending-text: #856404;
+
+  /* Accents */
+  --color-primary: #000000;
+  --color-border: #d8d8d833;
+  --color-border-selected: #000000;
+  --color-divider: #cccccc;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Montserrat', var(--font-sans);
+
+  --text-xs: 0.625rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+
+  /* Spacing */
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 2.5rem;
+
+  /* Layout */
+  --header-height: 140px;
+  --header-padding-y: 1.75rem;
+  --swoop-height: clamp(48px, 4.5vw, 70px);
+  --sidebar-width: clamp(260px, 18vw, 320px);
+  --layout-gap: clamp(1.5rem, 3vw, 3.5rem);
+  --content-padding: clamp(1.25rem, 2.5vw, 2.5rem);
+  --content-wide-max: 2200px;
+  --content-narrow-max: 1200px;
+  --card-min-width: 340px;
+  --radius-sm: 7px;
+  --radius-md: 20px;
+  --radius-pill: 107px;
+  --radius-chip: 27px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+
+  /* Portal brand accent — overridden per portal in portals.css */
+  --brand-color: #c41230;
+}

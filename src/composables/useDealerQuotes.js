@@ -30,8 +30,8 @@ export function useDealerQuotes() {
     return ensureLoaded()
   }
 
-  async function registerQuote(payload, catalog, requestId) {
-    const quote = createQuoteRecord(requestId, payload, catalog)
+  async function registerQuote(payload, catalog, requestId, dealership = {}) {
+    const quote = createQuoteRecord(requestId, payload, catalog, dealership)
     await saveQuote(quote)
     quotes.value = [quote, ...quotes.value.filter((q) => q.id !== quote.id)]
     return quote
