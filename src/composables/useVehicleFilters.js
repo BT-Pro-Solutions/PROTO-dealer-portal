@@ -1,8 +1,8 @@
 import { ref, computed } from 'vue'
 import { getPriceRangeIds, vehicleMatchesPriceRange } from '../data/vehicles.js'
+import { useInventorySearch } from './useInventorySearch.js'
 
 const defaultFilters = () => ({
-  search: '',
   make: 'Ford',
   colors: ['white', 'silver'],
   truckTypes: ['Cab Chassis', 'Van'],
@@ -14,10 +14,11 @@ const defaultFilters = () => ({
 export function useVehicleFilters(vehicles) {
   const filters = ref(defaultFilters())
   const sortBy = ref('make_model')
+  const { searchQuery } = useInventorySearch()
 
   const filteredVehicles = computed(() => {
     let results = vehicles.value.filter((vehicle) => {
-      const { search, make, colors, truckTypes, rearWheels, drives, priceRanges } = filters.value
+      const { make, colors, truckTypes, rearWheels, drives, priceRanges } = filters.value
 
       if (make && vehicle.make !== make) return false
       if (colors.length && !colors.includes(vehicle.color)) return false
@@ -31,8 +32,8 @@ export function useVehicleFilters(vehicles) {
         return false
       }
 
-      if (search.trim()) {
-        const q = search.trim().toLowerCase()
+      if (searchQuery.value.trim()) {
+        const q = searchQuery.value.trim().toLowerCase()
         const haystack = `${vehicle.title} ${vehicle.vin} ${vehicle.make} ${vehicle.model}`.toLowerCase()
         if (!haystack.includes(q)) return false
       }
@@ -84,6 +85,7 @@ export function useVehicleFilters(vehicles) {
 
   function resetFilters() {
     filters.value = defaultFilters()
+    searchQuery.value = ''
     sortBy.value = 'make_model'
   }
 

@@ -2,10 +2,11 @@
 import { ref, computed, inject, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { fetchUpfitterContact } from '../data/dealer.js'
-import { submitQuoteRequest, formatPrice } from '../data/vehicles.js'
-import { useVehicleSelection } from '../composables/useVehicleSelection.js'
-import { useQuoteDraft } from '../composables/useQuoteDraft.js'
+import { fetchUpfitterContact } from '../../data/dealer.js'
+import { submitQuoteRequest, formatPrice } from '../../data/vehicles.js'
+import { useVehicleSelection } from '../../composables/useVehicleSelection.js'
+import { useQuoteDraft } from '../../composables/useQuoteDraft.js'
+import { useDealerQuotes } from '../../composables/useDealerQuotes.js'
 
 const catalog = inject('catalog')
 const router = useRouter()
@@ -14,8 +15,16 @@ const submitting = ref(false)
 const submitted = ref(false)
 
 const { selectedIdsList, removeSelection, clearSelection } = useVehicleSelection()
-const { getInstructions, setInstructions, removeInstructions, clearAllInstructions, buildPayload } =
-  useQuoteDraft()
+const {
+  customerInfo,
+  getInstructions,
+  setInstructions,
+  removeInstructions,
+  clearAllInstructions,
+  clearCustomerInfo,
+  buildPayload,
+} = useQuoteDraft()
+const { registerQuote } = useDealerQuotes()
 
 const selectedVehicles = computed(() =>
   selectedIdsList.value
@@ -33,7 +42,7 @@ onMounted(async () => {
 
 watch(selectedIdsList, (ids) => {
   if (ids.length === 0 && !submitted.value) {
-    router.replace({ name: 'inventory' })
+    router.replace({ name: 'dealer-inventory' })
   }
 }, { flush: 'post' })
 
@@ -45,12 +54,20 @@ function removeVehicle(id) {
 async function handleSubmit() {
   if (selectedVehicles.value.length === 0 || submitting.value) return
 
+  if (!customerInfo.name.trim() || !customerInfo.email.trim()) {
+    alert('Please enter customer name and email before submitting.')
+    return
+  }
+
   submitting.value = true
   try {
-    await submitQuoteRequest(buildPayload(selectedIdsList.value))
+    const payload = buildPayload(selectedIdsList.value)
+    const result = await submitQuoteRequest(payload)
+    await registerQuote(payload, catalog.value, result.requestId)
     submitted.value = true
     clearSelection()
     clearAllInstructions()
+    clearCustomerInfo()
   } catch {
     alert('Unable to submit quote request. Please try again.')
   } finally {
@@ -62,26 +79,81 @@ async function handleSubmit() {
 <template>
   <div class="quote page-content page-content--narrow">
     <template v-if="submitted">
-      <div class="quote__thank-you">
+      <div class="quote__thank-you reveal">
         <h1 class="quote__title">Thank you!</h1>
         <p class="quote__message">
           Your quote request has been submitted to {{ upfitter?.name ?? 'Zoresco' }}.
           You should expect a quote soon — typically within one business day.
         </p>
-        <RouterLink to="/" class="quote__btn">Back to inventory</RouterLink>
+        <RouterLink :to="{ name: 'dealer-inventory' }" class="quote__btn">Back to inventory</RouterLink>
       </div>
     </template>
 
     <template v-else>
-      <h1 class="quote__title">Request a Quote</h1>
-      <p class="quote__subtitle">
+      <h1 class="quote__title reveal">
+        Request a Quote for {{ selectedVehicles.length }} Truck{{ selectedVehicles.length === 1 ? '' : 's' }}
+      </h1>
+      <p class="quote__subtitle reveal reveal--delay-1">
         Review your selected vehicles, add instructions for each, and submit to
         {{ upfitter?.name ?? 'your upfitter' }}.
       </p>
 
       <div class="quote__layout">
-        <div class="quote__vehicles">
-          <article v-for="vehicle in selectedVehicles" :key="vehicle.id" class="quote-item">
+        <div class="quote__main">
+          <section class="quote__customer reveal reveal--delay-2">
+            <h2 class="quote__customer-heading">Customer information</h2>
+            <p class="quote__customer-note">
+              Who is this quote for? This will be attached to the request for your upfitter.
+            </p>
+            <div class="quote__customer-fields">
+              <label class="quote__field">
+                Customer name
+                <input
+                  v-model="customerInfo.name"
+                  type="text"
+                  class="quote__input"
+                  required
+                  autocomplete="name"
+                />
+              </label>
+              <label class="quote__field">
+                Email
+                <input
+                  v-model="customerInfo.email"
+                  type="email"
+                  class="quote__input"
+                  required
+                  autocomplete="email"
+                />
+              </label>
+              <label class="quote__field">
+                Phone
+                <input
+                  v-model="customerInfo.phone"
+                  type="tel"
+                  class="quote__input"
+                  autocomplete="tel"
+                />
+              </label>
+              <label class="quote__field">
+                Company <span class="quote__optional">(optional)</span>
+                <input
+                  v-model="customerInfo.company"
+                  type="text"
+                  class="quote__input"
+                  autocomplete="organization"
+                />
+              </label>
+            </div>
+          </section>
+
+          <div class="quote__vehicles reveal-stagger">
+          <article
+            v-for="(vehicle, index) in selectedVehicles"
+            :key="vehicle.id"
+            class="quote-item"
+            :style="{ '--stagger-i': index }"
+          >
             <div class="quote-item__header">
               <div class="quote-item__summary">
                 <img :src="vehicle.imageUrl" :alt="vehicle.title" class="quote-item__thumb" />
@@ -114,9 +186,19 @@ async function handleSubmit() {
               @input="setInstructions(vehicle.id, $event.target.value)"
             ></textarea>
           </article>
+          </div>
+
+          <button
+            type="button"
+            class="quote__submit quote__submit--main"
+            :disabled="submitting || selectedVehicles.length === 0"
+            @click="handleSubmit"
+          >
+            {{ submitting ? 'Submitting…' : `Submit ${selectedVehicles.length} Truck${selectedVehicles.length === 1 ? '' : 's'} for Quote` }}
+          </button>
         </div>
 
-        <aside v-if="upfitter" class="quote__contact">
+        <aside v-if="upfitter" class="quote__contact reveal reveal--delay-3">
           <h2 class="quote__contact-heading">Upfitter Contact</h2>
           <p class="quote__contact-name">{{ upfitter.name }}</p>
           <dl class="quote__contact-fields">
@@ -157,7 +239,7 @@ async function handleSubmit() {
         </aside>
       </div>
 
-      <RouterLink to="/" class="quote__back">
+      <RouterLink :to="{ name: 'dealer-inventory' }" class="quote__back">
         <Icon icon="mdi:arrow-left" width="18" height="18" aria-hidden="true" />
         Back to inventory
       </RouterLink>
@@ -185,11 +267,70 @@ async function handleSubmit() {
   align-items: start;
 }
 
-.quote-item {
-  background: var(--color-bg-card);
+.quote__main {
+  min-width: 0;
+}
+
+.quote__customer {
+  background: var(--color-bg-muted);
   border-radius: var(--radius-md);
   padding: var(--space-lg);
   margin-bottom: var(--space-lg);
+}
+
+.quote__customer-heading {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+.quote__customer-note {
+  margin: 0 0 var(--space-lg);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.quote__customer-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.quote__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.quote__optional {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.quote__input {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 400;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+
+.quote__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
+}
+
+.quote-item {
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  color: #000;
 }
 
 .quote-item__header {
@@ -198,7 +339,6 @@ async function handleSubmit() {
   align-items: flex-start;
   gap: var(--space-md);
   margin-bottom: var(--space-md);
-  color: #fff;
 }
 
 .quote-item__summary {
@@ -259,7 +399,6 @@ async function handleSubmit() {
 }
 
 .quote-item__instructions-label {
-  color: #fff;
   display: block;
   font-size: var(--text-sm);
   font-weight: 600;
@@ -285,7 +424,7 @@ async function handleSubmit() {
 
 .quote__contact {
   position: sticky;
-  top: var(--space-lg);
+  top: 100px;
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
   padding: var(--space-xl);
@@ -314,7 +453,7 @@ async function handleSubmit() {
 .quote__contact-fields dt {
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--color-text-muted);
+  color: #ccc;
   margin-bottom: 0.1rem;
 }
 
@@ -341,7 +480,7 @@ async function handleSubmit() {
 .quote__subtotal-label {
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--color-text-muted);
+  color: #ccc;
 }
 
 .quote__subtotal-amount {
@@ -353,7 +492,7 @@ async function handleSubmit() {
 .quote__subtotal-note {
   margin: 0 0 var(--space-xl);
   font-size: var(--text-sm);
-  color: var(--color-text-muted);
+  color: #ccc;
   line-height: 1.4;
 }
 
@@ -367,6 +506,10 @@ async function handleSubmit() {
   padding: 0.9rem 1.5rem;
   border-radius: var(--radius-sm);
   transition: opacity var(--transition-fast);
+}
+
+.quote__submit--main {
+  margin-top: var(--space-sm);
 }
 
 .quote__submit:hover:not(:disabled) {
@@ -420,6 +563,10 @@ async function handleSubmit() {
 
 @media (max-width: 960px) {
   .quote__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .quote__customer-fields {
     grid-template-columns: 1fr;
   }
 

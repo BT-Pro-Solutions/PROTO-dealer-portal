@@ -1,7 +1,7 @@
 <script setup>
 import { ref, inject, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { fetchPortalUsers, requestPortalUser } from '../data/dealer.js'
+import { fetchPortalUsers, requestPortalUser } from '../../data/dealer.js'
 
 const session = inject('session')
 
@@ -52,156 +52,115 @@ async function handleUserRequest() {
 </script>
 
 <template>
-  <div class="account page-content page-content--narrow">
-    <h1 class="account__title">My Account</h1>
-    <p class="account__subtitle">Manage your dealer portal profile and preferences.</p>
+  <div class="team page-content page-content--narrow">
+    <RouterLink :to="{ name: 'dealer-account' }" class="team__link">
+      <Icon icon="mdi:arrow-left" width="18" height="18" aria-hidden="true" />
+      Back to My Account
+    </RouterLink>
+    
+    <h1 class="team__title reveal">Manage Team</h1>
+    <p class="team__subtitle reveal reveal--delay-1">
+      Portal users with access to {{ session.dealershipName }}.
+    </p>
 
-    <section class="account__section">
-      <h2 class="account__heading">Profile</h2>
-      <dl class="account__fields">
-        <div class="account__field">
-          <dt>Name</dt>
-          <dd>{{ session.userName }}</dd>
-        </div>
-        <div class="account__field">
-          <dt>Email</dt>
-          <dd>{{ session.email }}</dd>
-        </div>
-        <div class="account__field">
-          <dt>Phone</dt>
-          <dd>{{ session.phone }}</dd>
-        </div>
-      </dl>
-    </section>
-
-    <section class="account__section">
-      <h2 class="account__heading">Dealership</h2>
-      <dl class="account__fields">
-        <div class="account__field">
-          <dt>Dealership</dt>
-          <dd>{{ session.dealershipName }}</dd>
-        </div>
-        <div class="account__field">
-          <dt>Address</dt>
-          <dd>{{ session.dealershipAddress }}</dd>
-        </div>
-        <div class="account__field">
-          <dt>Upfitter</dt>
-          <dd>{{ session.upfitterName }}</dd>
-        </div>
-      </dl>
-    </section>
-
-    <section class="account__section">
-      <div class="account__section-header">
-        <h2 class="account__heading">Portal users</h2>
+    <section class="team__section reveal reveal--delay-2">
+      <div class="team__section-header">
+        <h2 class="team__heading">Portal users</h2>
         <button
           type="button"
-          class="account__btn account__btn--primary"
+          class="team__btn team__btn--primary"
           @click="showUserForm = !showUserForm"
         >
           {{ showUserForm ? 'Cancel' : 'Request new user' }}
         </button>
       </div>
 
-      <p class="account__note">
-        Users with access to this dealer portal for {{ session.dealershipName }}.
-      </p>
-
       <div
         v-if="userRequestMessage"
-        class="account__message"
-        :class="`account__message--${userRequestMessage.type}`"
+        class="team__message"
+        :class="`team__message--${userRequestMessage.type}`"
         role="status"
       >
         {{ userRequestMessage.text }}
       </div>
 
-      <ul v-if="portalUsers.length" class="account__users">
-        <li v-for="user in portalUsers" :key="user.id" class="account__user">
-          <div class="account__user-info">
-            <span class="account__user-name">{{ user.name }}</span>
-            <span class="account__user-email">{{ user.email }}</span>
+      <ul v-if="portalUsers.length" class="team__users">
+        <li v-for="user in portalUsers" :key="user.id" class="team__user">
+          <div class="team__user-info">
+            <span class="team__user-name">{{ user.name }}</span>
+            <span class="team__user-email">{{ user.email }}</span>
           </div>
-          <span class="account__user-role">{{ user.role }}</span>
+          <span class="team__user-role">{{ user.role }}</span>
         </li>
       </ul>
 
-      <form v-if="showUserForm" class="account__user-form" @submit.prevent="handleUserRequest">
-        <h3 class="account__form-heading">Request a new portal user</h3>
-        <p class="account__note">
+      <p v-else class="team__note">No portal users found.</p>
+
+      <form v-if="showUserForm" class="team__user-form" @submit.prevent="handleUserRequest">
+        <h3 class="team__form-heading">Request a new portal user</h3>
+        <p class="team__note">
           Submit a request to {{ session.upfitterName }} to add someone from your dealership.
         </p>
 
-        <label class="account__label">
+        <label class="team__label">
           Full name
-          <input v-model="newUser.name" type="text" class="account__input" required />
+          <input v-model="newUser.name" type="text" class="team__input" required />
         </label>
 
-        <label class="account__label">
+        <label class="team__label">
           Email
-          <input v-model="newUser.email" type="email" class="account__input" required />
+          <input v-model="newUser.email" type="email" class="team__input" required />
         </label>
 
-        <label class="account__label">
+        <label class="team__label">
           Role
-          <select v-model="newUser.role" class="account__input">
+          <select v-model="newUser.role" class="team__input">
             <option value="Sales">Sales</option>
             <option value="Admin">Admin</option>
             <option value="View only">View only</option>
           </select>
         </label>
 
-        <label class="account__label">
-          Notes <span class="account__optional">(optional)</span>
+        <label class="team__label">
+          Notes <span class="team__optional">(optional)</span>
           <textarea
             v-model="newUser.notes"
-            class="account__input account__textarea"
+            class="team__input team__textarea"
             rows="3"
             placeholder="Any context for the upfitter…"
           ></textarea>
         </label>
 
-        <button type="submit" class="account__btn account__btn--primary" :disabled="submitting">
+        <button type="submit" class="team__btn team__btn--primary" :disabled="submitting">
           {{ submitting ? 'Submitting…' : 'Submit request' }}
         </button>
       </form>
     </section>
 
-    <section class="account__section">
-      <h2 class="account__heading">Security</h2>
-      <p class="account__note">Password management will connect to auth when the backend is ready.</p>
-      <button type="button" class="account__btn" disabled>Change password</button>
-    </section>
-
-    <RouterLink to="/" class="account__link">
-      <Icon icon="mdi:arrow-left" width="18" height="18" aria-hidden="true" />
-      Back to inventory
-    </RouterLink>
   </div>
 </template>
 
 <style scoped>
-.account__title {
+.team__title {
   margin: 0 0 var(--space-xs);
   font-family: var(--font-display);
   font-weight: 900;
   font-size: 1.75rem;
 }
 
-.account__subtitle {
+.team__subtitle {
   margin: 0 0 var(--space-2xl);
   color: var(--color-text-muted);
 }
 
-.account__section {
-  background: var(--color-bg-card);
+.team__section {
+  background: var(--color-bg-search);
   border-radius: var(--radius-md);
   padding: var(--space-xl);
   margin-bottom: var(--space-lg);
 }
 
-.account__section-header {
+.team__section-header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -210,42 +169,23 @@ async function handleUserRequest() {
   margin-bottom: var(--space-sm);
 }
 
-.account__section-header .account__heading {
+.team__section-header .team__heading {
   margin-bottom: 0;
 }
 
-.account__heading {
+.team__heading {
   margin: 0 0 var(--space-lg);
   font-size: var(--text-xl);
   font-weight: 700;
 }
 
-.account__fields {
-  display: grid;
-  gap: var(--space-md);
-  margin: 0;
-}
-
-.account__field dt {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-text-muted);
-  margin-bottom: 0.15rem;
-}
-
-.account__field dd {
-  margin: 0;
-  font-size: var(--text-lg);
-  font-weight: 500;
-}
-
-.account__note {
+.team__note {
   margin: 0 0 var(--space-md);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
 
-.account__message {
+.team__message {
   margin-bottom: var(--space-md);
   padding: var(--space-md);
   border-radius: var(--radius-sm);
@@ -253,15 +193,17 @@ async function handleUserRequest() {
   font-weight: 500;
 }
 
-.account__message--success {
+.team__message--success {
   background: var(--color-available);
+  color: var(--color-text);
 }
 
-.account__message--error {
+.team__message--error {
   background: var(--color-on-hold);
+  color: var(--color-text);
 }
 
-.account__users {
+.team__users {
   list-style: none;
   margin: 0 0 var(--space-lg);
   padding: 0;
@@ -270,56 +212,58 @@ async function handleUserRequest() {
   gap: var(--space-sm);
 }
 
-.account__user {
+.team__user {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
   padding: var(--space-md);
-  background: var(--color-bg);
+  background: #fff;
   border-radius: var(--radius-sm);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.account__user-info {
+.team__user-info {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
   min-width: 0;
 }
 
-.account__user-name {
+.team__user-name {
   font-weight: 600;
 }
 
-.account__user-email {
+.team__user-email {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
-.account__user-role {
+.team__user-role {
   flex-shrink: 0;
   font-size: var(--text-sm);
   font-weight: 600;
   padding: 0.25rem 0.65rem;
-  background: var(--color-bg-search);
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: var(--radius-chip);
 }
 
-.account__user-form {
+.team__user-form {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
   padding-top: var(--space-md);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.account__form-heading {
+.team__form-heading {
   margin: 0;
   font-size: var(--text-lg);
   font-weight: 700;
 }
 
-.account__label {
+.team__label {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
@@ -327,56 +271,58 @@ async function handleUserRequest() {
   font-weight: 600;
 }
 
-.account__optional {
+.team__optional {
   font-weight: 400;
   color: var(--color-text-muted);
 }
 
-.account__input {
+.team__input {
   font-family: var(--font-sans);
   font-size: var(--text-base);
   font-weight: 400;
   padding: 0.65rem 0.85rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: var(--radius-sm);
-  background: var(--color-bg);
+  background: #fff;
 }
 
-.account__input:focus {
+.team__input:focus {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
 }
 
-.account__textarea {
+.team__textarea {
   resize: vertical;
   min-height: 80px;
 }
 
-.account__btn {
+.team__btn {
   align-self: flex-start;
-  background: var(--color-bg-search);
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
   padding: 0.65rem 1.25rem;
   border-radius: var(--radius-sm);
   font-weight: 600;
   font-size: var(--text-base);
 }
 
-.account__btn:disabled {
+.team__btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.account__btn--primary {
+.team__btn--primary {
   background: var(--color-primary);
   color: var(--color-text-inverse);
+  border-color: var(--color-primary);
 }
 
-.account__btn--primary:hover:not(:disabled) {
+.team__btn--primary:hover:not(:disabled) {
   opacity: 0.85;
 }
 
-.account__link {
+.team__link {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -386,7 +332,7 @@ async function handleUserRequest() {
   text-decoration: none;
 }
 
-.account__link:hover {
+.team__link:hover {
   text-decoration: underline;
 }
 </style>

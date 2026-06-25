@@ -3,10 +3,10 @@
  * Replace fetchDealerSession() with a real API call when backend is ready.
  */
 export const dealerSession = {
-  userName: 'John Dealershipman',
+  userName: 'John Smithington',
   email: 'john@bobstrucks.example',
   phone: '(555) 867-5309',
-  dealershipName: "Bob's Emporium of Trucks",
+  dealershipName: "Jasper Truck Sales",
   dealershipAddress: '1234 Truck Lane, Motor City, MI 48201',
   upfitterName: 'Zoresco',
 }
@@ -26,7 +26,6 @@ export const upfitterProfile = {
   headline: 'Why buy from Zoresco',
   body: [
     'For over four decades, Zoresco has been a trusted partner to commercial truck dealers nationwide. We specialize in chassis upfitting, fleet-ready builds, and turnkey delivery so your customers get on the road faster.',
-    'Every vehicle in this portal is backed by our in-house engineering team, factory-direct relationships, and a dedicated dealer support line. When you request a quote, you are working directly with the upfitter — not a middleman.',
     'From service bodies and flatbeds to custom upfits, Zoresco delivers quality craftsmanship, transparent lead times, and competitive pricing built for dealer success.',
   ],
 }

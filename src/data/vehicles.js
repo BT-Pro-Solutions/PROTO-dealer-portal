@@ -118,7 +118,6 @@ function buildCatalog() {
         const rearWheel = variant % 2 === 0 ? 'SRW' : 'DRW'
         const drive = variant % 2 === 0 ? '4x4' : '4x2'
         const year = 2025 + (variant % 2)
-        const status = variant % 5 === 0 ? 'on_hold' : 'available'
         const imageUrls = buildImageUrls(id)
         const isVan = truckType === 'Van'
 
@@ -135,7 +134,6 @@ function buildCatalog() {
           truckType,
           rearWheel,
           drive,
-          status,
           imageUrl: imageUrls[0],
           imageUrls,
           engine: isVan ? `${make} ${variant % 2 === 0 ? '3.5L EcoBoost' : '3.5L V6'}` : engines[make],
@@ -144,7 +142,6 @@ function buildCatalog() {
           cabToAxle: isVan ? 'N/A' : String(60 + (variant % 5) * 6),
           wheelbase: isVan ? String(130 + (variant % 3) * 10) : String(158 + (variant % 4) * 15),
           bodyType: isVan ? 'Cargo van' : bodyTypes[variant % bodyTypes.length],
-          poolStatus: status === 'available' ? 'Available' : 'On Hold',
           chassisDue: chassisDueOptions[variant % chassisDueOptions.length],
           preUpfitPrice: generatePreUpfitPrice(id, make, truckType, variant),
         })
@@ -163,13 +160,13 @@ export async function fetchVehicles() {
   return vehicles
 }
 
-export async function submitQuoteRequest(items) {
+export async function submitQuoteRequest(payload) {
   // TODO: return await fetch('/api/dealer/quote-requests', {
   //   method: 'POST',
   //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ items }),
+  //   body: JSON.stringify(payload),
   // }).then(r => r.json())
-  console.info('[dummy] Quote request submitted:', items)
+  console.info('[dummy] Quote request submitted:', payload)
   return { success: true, requestId: `REQ-${Date.now()}` }
 }
 
@@ -188,7 +185,6 @@ export const vehicleDetailFields = [
   { label: 'Rear wheel', key: 'rearWheel' },
   { label: 'Truck type', key: 'truckType' },
   { label: 'Body type', key: 'bodyType' },
-  { label: 'Pool status', key: 'poolStatus' },
   { label: 'Chassis due', key: 'chassisDue' },
 ]
 

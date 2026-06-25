@@ -2,6 +2,13 @@ import { reactive } from 'vue'
 
 const instructionsByVehicleId = reactive({})
 
+const customerInfo = reactive({
+  name: '',
+  email: '',
+  phone: '',
+  company: '',
+})
+
 export function useQuoteDraft() {
   function getInstructions(vehicleId) {
     return instructionsByVehicleId[vehicleId] ?? ''
@@ -21,18 +28,35 @@ export function useQuoteDraft() {
     }
   }
 
+  function clearCustomerInfo() {
+    customerInfo.name = ''
+    customerInfo.email = ''
+    customerInfo.phone = ''
+    customerInfo.company = ''
+  }
+
   function buildPayload(selectedIds) {
-    return selectedIds.map((vehicleId) => ({
-      vehicleId,
-      instructions: getInstructions(vehicleId),
-    }))
+    return {
+      customer: {
+        name: customerInfo.name.trim(),
+        email: customerInfo.email.trim(),
+        phone: customerInfo.phone.trim(),
+        company: customerInfo.company.trim(),
+      },
+      items: selectedIds.map((vehicleId) => ({
+        vehicleId,
+        instructions: getInstructions(vehicleId),
+      })),
+    }
   }
 
   return {
+    customerInfo,
     getInstructions,
     setInstructions,
     removeInstructions,
     clearAllInstructions,
+    clearCustomerInfo,
     buildPayload,
   }
 }

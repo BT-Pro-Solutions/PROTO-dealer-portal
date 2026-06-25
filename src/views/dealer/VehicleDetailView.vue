@@ -2,11 +2,12 @@
 import { ref, computed, inject, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import VehicleImageGallery from '../components/VehicleImageGallery.vue'
-import UpfitterPromo from '../components/UpfitterPromo.vue'
-import { vehicleDetailFields, formatDetailValue, formatPrice } from '../data/vehicles.js'
-import { fetchUpfitterProfile } from '../data/dealer.js'
-import { useVehicleSelection } from '../composables/useVehicleSelection.js'
+import VehicleImageGallery from '../../components/VehicleImageGallery.vue'
+import UpfitterPromo from '../../components/UpfitterPromo.vue'
+import { vehicleDetailFields, formatDetailValue, formatPrice } from '../../data/vehicles.js'
+import { fetchUpfitterProfile } from '../../data/dealer.js'
+import { useVehicleSelection } from '../../composables/useVehicleSelection.js'
+import { flyCardToRequestButton } from '../../composables/useFlyToRequest.js'
 
 const props = defineProps({
   id: {
@@ -19,6 +20,7 @@ const catalog = inject('catalog')
 const router = useRouter()
 const upfitterProfile = ref(null)
 const { isSelected, toggleSelection } = useVehicleSelection()
+const addToQuoteBtnRef = ref(null)
 
 onMounted(async () => {
   upfitterProfile.value = await fetchUpfitterProfile()
@@ -35,52 +37,47 @@ const detailRows = computed(() => {
 })
 
 function goBack() {
-  router.push({ name: 'inventory' })
+  router.push({ name: 'dealer-inventory' })
+}
+
+function handleToggleQuote() {
+  if (!vehicle.value) return
+
+  if (isSelected(vehicle.value.id)) {
+    toggleSelection(vehicle.value.id)
+    return
+  }
+
+  const source = addToQuoteBtnRef.value
+  if (!source) return
+
+  const sourceRect = source.getBoundingClientRect()
+  const staticClone = source.cloneNode(true)
+  staticClone.textContent = 'Add To Quote'
+  staticClone.classList.remove('detail__select-btn--selected')
+
+  toggleSelection(vehicle.value.id)
+  flyCardToRequestButton(source, staticClone, sourceRect)
 }
 </script>
 
 <template>
   <div v-if="vehicle" class="detail page-content page-content--narrow">
-    <button type="button" class="detail__back" @click="goBack">
+    <button type="button" class="detail__back reveal" @click="goBack">
       <Icon icon="mdi:arrow-left" width="18" height="18" aria-hidden="true" />
       Back to inventory
     </button>
 
-    <div class="detail__header">
-      <div>
-        <h1 class="detail__title">{{ vehicle.title }}</h1>
-        <p class="detail__meta">{{ vehicle.year }} · {{ vehicle.make }}</p>
-        <p class="detail__price">
-          <span class="detail__price-amount">{{ formatPrice(vehicle.preUpfitPrice) }}</span>
-          <span class="detail__price-label">Pre-upfit pricing</span>
-        </p>
-      </div>
-
-      <button
-        type="button"
-        class="detail__select-btn"
-        :class="{ 'detail__select-btn--selected': isSelected(vehicle.id) }"
-        @click="toggleSelection(vehicle.id)"
-      >
-        {{ isSelected(vehicle.id) ? 'Remove from quote list' : 'Add to quote list' }}
-      </button>
-    </div>
+    
 
     <div class="detail__layout">
-      <div class="detail__left">
+      <div class="detail__left reveal reveal--delay-2">
         <div class="detail__media">
           <VehicleImageGallery :images="vehicle.imageUrls" :alt="vehicle.title" />
-
-          <span
-            class="detail__badge"
-            :class="vehicle.status === 'available' ? 'detail__badge--available' : 'detail__badge--hold'"
-          >
-            {{ vehicle.status === 'available' ? 'AVAILABLE' : 'ON HOLD' }}
-          </span>
         </div>
 
-        <section class="detail__specs-section" aria-labelledby="vehicle-specs-heading">
-          <h2 id="vehicle-specs-heading" class="detail__specs-heading">Vehicle details</h2>
+        <section class="detail__specs-section reveal reveal--delay-3" aria-labelledby="vehicle-specs-heading">
+          <h2 id="vehicle-specs-heading" class="detail__specs-heading">Full Vehicle Spec</h2>
 
           <table class="detail__table">
             <tbody>
@@ -92,15 +89,36 @@ function goBack() {
           </table>
         </section>
       </div>
+      <div class="detail__right">
+        <div class="detail__header reveal reveal--delay-1">
+          <div>
+            <h1 class="detail__title">{{ vehicle.title }}</h1>
+            <p class="detail__meta">{{ vehicle.year }} · {{ vehicle.make }}</p>
+            <p class="detail__price">
+              <span class="detail__price-amount">{{ formatPrice(vehicle.preUpfitPrice) }}</span>
+              <span class="detail__price-label">Pre-upfit pricing</span>
+            </p>
+          </div>
 
-      <UpfitterPromo v-if="upfitterProfile" :profile="upfitterProfile" />
+          <button
+            ref="addToQuoteBtnRef"
+            type="button"
+            class="detail__select-btn"
+            :class="{ 'detail__select-btn--selected': isSelected(vehicle.id) }"
+            @click="handleToggleQuote"
+          >
+            {{ isSelected(vehicle.id) ? 'Remove From Quote' : 'Add To Quote' }}
+          </button>
+        </div>
+        <UpfitterPromo v-if="upfitterProfile" :profile="upfitterProfile" />
+      </div>
       
     </div>
   </div>
 
   <div v-else class="page-content page-content--narrow">
     <p class="detail__missing">Vehicle not found.</p>
-    <RouterLink to="/">Return to inventory</RouterLink>
+    <RouterLink :to="{ name: 'dealer-inventory' }">Return to inventory</RouterLink>
   </div>
 </template>
 
@@ -176,25 +194,6 @@ function goBack() {
   position: relative;
 }
 
-.detail__badge {
-  position: absolute;
-  top: 0;
-  left: 0;
-  padding: 0.5rem 1.25rem;
-  font-size: 14px;
-  font-weight: 700;
-  border-bottom-right-radius: 3px;
-  z-index: 1;
-}
-
-.detail__badge--available {
-  background: var(--color-available);
-}
-
-.detail__badge--hold {
-  background: var(--color-on-hold);
-}
-
 .detail__specs-section {
   background: var(--color-bg-card);
   color: #fff;
@@ -232,7 +231,7 @@ function goBack() {
   padding-right: var(--space-lg);
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--color-text-muted);
+  color: #ccc;
 }
 
 .detail__table td {
@@ -247,7 +246,7 @@ function goBack() {
   font-weight: 700;
   font-size: 20px;
   padding: 1rem 2rem;
-  border-radius: var(--radius-sm);
+  border-radius: 50px;
   transition: opacity var(--transition-fast);
   flex-shrink: 0;
 }

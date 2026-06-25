@@ -1,9 +1,9 @@
 <script setup>
 import { ref, inject } from 'vue'
-import SidebarFilters from '../components/SidebarFilters.vue'
-import VehicleGrid from '../components/VehicleGrid.vue'
-import { useVehicleFilters } from '../composables/useVehicleFilters.js'
-import { useVehicleSelection } from '../composables/useVehicleSelection.js'
+import SidebarFilters from '../../components/SidebarFilters.vue'
+import VehicleGrid from '../../components/VehicleGrid.vue'
+import { useVehicleFilters } from '../../composables/useVehicleFilters.js'
+import { useVehicleSelection } from '../../composables/useVehicleSelection.js'
 
 const catalog = inject('catalog')
 const mobileFiltersOpen = ref(false)
@@ -18,7 +18,7 @@ const { toggleSelection, isSelected } = useVehicleSelection()
   <div class="inventory">
     <button
       type="button"
-      class="inventory__filters-toggle"
+      class="inventory__filters-toggle reveal"
       :aria-expanded="mobileFiltersOpen"
       @click="mobileFiltersOpen = !mobileFiltersOpen"
     >
@@ -27,9 +27,8 @@ const { toggleSelection, isSelected } = useVehicleSelection()
 
     <div class="inventory__layout" :class="{ 'inventory__layout--filters-open': mobileFiltersOpen }">
       <SidebarFilters
-        class="inventory__sidebar"
+        class="inventory__sidebar reveal reveal--delay-1"
         :filters="filters"
-        @update:search="filters.search = $event"
         @set-make="setMake"
         @toggle-color="toggleColor"
         @toggle-filter="toggleArrayFilter"

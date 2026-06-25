@@ -44,13 +44,6 @@ function handleToggleSelect() {
       <div class="vehicle-card__image-wrap">
         <img :src="vehicle.imageUrl" :alt="vehicle.title" class="vehicle-card__image" loading="lazy" />
 
-        <span
-          class="vehicle-card__badge"
-          :class="vehicle.status === 'available' ? 'vehicle-card__badge--available' : 'vehicle-card__badge--hold'"
-        >
-          {{ vehicle.status === 'available' ? 'AVAILABLE' : 'ON HOLD' }}
-        </span>
-
         <button
           type="button"
           class="vehicle-card__select-btn"
@@ -72,11 +65,10 @@ function handleToggleSelect() {
 
       <div class="vehicle-card__info">
         <h3 class="vehicle-card__title">{{ vehicle.title }}</h3>
+        <p class="vehicle-card__vin">{{ vehicle.vin }}</p>
         <p class="vehicle-card__price">
           <span class="vehicle-card__price-amount">{{ formatPrice(vehicle.preUpfitPrice) }}</span>
-          <span class="vehicle-card__price-label">Pre-upfit pricing</span>
         </p>
-        <p class="vehicle-card__vin">{{ vehicle.vin }}</p>
       </div>
 
       <div class="vehicle-card__specs">
@@ -136,41 +128,25 @@ function handleToggleSelect() {
   object-fit: cover;
 }
 
-.vehicle-card__badge {
-  position: absolute;
-  top: 0;
-  left: 0;
-  padding: 0.5rem 1.25rem;
-  color: #222;
-  font-size: 14px;
-  font-weight: 700;
-  border-bottom-right-radius: 10px;
-  pointer-events: none;
-}
-
-.vehicle-card__badge--available {
-  background: var(--color-available);
-}
-
-.vehicle-card__badge--hold {
-  background: var(--color-on-hold);
-}
-
 .vehicle-card__select-btn {
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 36px;
+  width: 80px;
   height: 36px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
-  border: 2px solid rgba(0, 0, 0, 0.12);
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  border: 2px solid #2222224a;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 1;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  transition: background var(--transition-fast), border-color var(--transition-fast), width var(--transition-fast);
+  &::before {
+    content: 'SELECT';
+  }
 }
 
 .vehicle-card__select-btn:hover {
@@ -180,6 +156,10 @@ function handleToggleSelect() {
 .vehicle-card__select-btn--active {
   background: var(--brand-color);
   border-color: var(--brand-color);
+  width: 36px;
+  &::before {
+    content: '';
+  }
 }
 
 .vehicle-card__info {
@@ -202,28 +182,22 @@ function handleToggleSelect() {
 
 .vehicle-card__price-amount {
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: 24px;
   font-weight: 800;
 }
 
-.vehicle-card__price-label {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--color-text-muted);
-}
-
 .vehicle-card__vin {
-  margin: 0.35rem 0 0;
   font-size: var(--text-sm);
+  margin: 0;
   font-weight: 300;
-  color: var(--color-text-muted);
+  color: #ccc;
 }
 
 .vehicle-card__specs {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-xl) var(--space-xl);
+  padding: var(--space-xl) var(--space-xl);
   gap: var(--space-sm);
 }
 
@@ -233,7 +207,8 @@ function handleToggleSelect() {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  font-size: var(--text-base);
+  font-size: 12px;
+  text-transform: uppercase;
 }
 
 .vehicle-card__spec-label {
@@ -248,7 +223,7 @@ function handleToggleSelect() {
 .vehicle-card__spec-divider {
   width: 1px;
   height: 26px;
-  background: var(--color-divider);
+  background: var(--color-text-muted);
   flex-shrink: 0;
 }
 </style>

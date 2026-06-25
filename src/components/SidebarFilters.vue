@@ -1,5 +1,4 @@
 <script setup>
-import { Icon } from '@iconify/vue'
 import { filterOptions } from '../data/vehicles.js'
 import ColorSwatchCheck from './ColorSwatchCheck.vue'
 
@@ -10,26 +9,11 @@ defineProps({
   },
 })
 
-const emit = defineEmits(['update:search', 'set-make', 'toggle-color', 'toggle-filter'])
-
-function onSearchInput(event) {
-  emit('update:search', event.target.value)
-}
+const emit = defineEmits(['set-make', 'toggle-color', 'toggle-filter'])
 </script>
 
 <template>
   <aside class="sidebar">
-    <div class="sidebar__search">
-      <input
-        type="search"
-        class="sidebar__search-input"
-        placeholder="Search"
-        :value="filters.search"
-        @input="onSearchInput"
-      />
-      <Icon icon="mdi:magnify" class="sidebar__search-icon" width="24" height="24" aria-hidden="true" />
-    </div>
-
     <section class="sidebar__section">
       <h2 class="sidebar__heading">Make</h2>
       <div class="sidebar__pills">
@@ -139,40 +123,6 @@ function onSearchInput(event) {
   gap: var(--space-xl);
 }
 
-.sidebar__search {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.sidebar__search-input {
-  width: 100%;
-  height: 54px;
-  padding: 0 3.5rem 0 2rem;
-  border: none;
-  border-radius: var(--radius-pill);
-  background: var(--color-bg-search);
-  font-family: var(--font-sans);
-  font-size: var(--text-lg);
-  color: var(--color-text);
-  outline: none;
-}
-
-.sidebar__search-input::placeholder {
-  color: var(--color-text);
-}
-
-.sidebar__search-input:focus {
-  box-shadow: 0 0 0 2px var(--color-primary);
-}
-
-.sidebar__search-icon {
-  position: absolute;
-  right: 1.25rem;
-  color: var(--color-text);
-  pointer-events: none;
-}
-
 .sidebar__section {
   display: flex;
   flex-direction: column;
@@ -181,7 +131,7 @@ function onSearchInput(event) {
 
 .sidebar__heading {
   margin: 0;
-  font-size: var(--text-xl);
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -192,7 +142,7 @@ function onSearchInput(event) {
 }
 
 .sidebar__pill {
-  height: 54px;
+  min-height: 45px;
   padding: 0 1rem;
   border-radius: var(--radius-chip);
   background: var(--color-bg-pill);
@@ -225,6 +175,9 @@ function onSearchInput(event) {
 
 .sidebar__color--selected {
   border-color: var(--color-primary);
+  .sidebar__color-swatch {
+  box-shadow: inset 0 0 0 2px #fff;
+  }
 }
 
 .sidebar__color-swatch {
@@ -232,8 +185,9 @@ function onSearchInput(event) {
   width: 100%;
   height: 100%;
   border-radius: 50%;
+
+  box-shadow: inset 0 0 0 2px #6262628e;
   background: var(--swatch-color);
-  border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .sidebar__color-check {

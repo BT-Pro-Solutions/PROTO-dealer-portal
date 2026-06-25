@@ -1,47 +1,40 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import AppLayout from '../layouts/AppLayout.vue'
-import { useVehicleSelection } from '../composables/useVehicleSelection.js'
+import { isAuthenticated } from '../composables/useAuth.js'
+import { dealerRoutes } from './dealer.js'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      component: AppLayout,
-      children: [
-        {
-          path: '',
-          name: 'inventory',
-          component: () => import('../views/InventoryView.vue'),
-        },
-        {
-          path: 'vehicles/:id',
-          name: 'vehicle-detail',
-          component: () => import('../views/VehicleDetailView.vue'),
-          props: true,
-        },
-        {
-          path: 'account',
-          name: 'account',
-          component: () => import('../views/MyAccountView.vue'),
-        },
-        {
-          path: 'quote-request',
-          name: 'quote-request',
-          component: () => import('../views/QuoteRequestView.vue'),
-          beforeEnter() {
-            const { selectedCount } = useVehicleSelection()
-            if (selectedCount.value === 0) {
-              return { name: 'inventory' }
-            }
-          },
-        },
-      ],
+      redirect: () =>
+        isAuthenticated() ? { name: 'dealer-inventory' } : { name: 'dealer-login' },
     },
+    ...dealerRoutes,
+    // Future portal routes: upfitterRoutes, adminRoutes
   ],
-  scrollBehavior() {
+  scrollBehavior(to) {
+    if (to.hash) {
+      return {
+        el: to.hash,
+        top: 160,
+        behavior: 'smooth',
+      }
+    }
     return { top: 0 }
   },
+})
+
+router.beforeEach((to) => {
+  const authed = isAuthenticated()
+
+  if (to.meta.requiresAuth && !authed) {
+    return { name: 'dealer-login' }
+  }
+
+  if (to.meta.guestOnly && authed) {
+    return { name: 'dealer-inventory' }
+  }
 })
 
 export default router
