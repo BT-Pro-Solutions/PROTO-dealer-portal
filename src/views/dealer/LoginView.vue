@@ -101,7 +101,6 @@ function handleSubmit() {
   background: var(--color-bg);
   border-radius: var(--radius-md);
   padding: var(--space-2xl) var(--space-xl);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
 }
 
 .login__logo {
@@ -117,6 +116,8 @@ function handleSubmit() {
   font-size: 1.5rem;
   font-weight: 900;
   text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .login__subtitle {
@@ -146,8 +147,9 @@ function handleSubmit() {
 .login__input {
   width: 100%;
   padding: 0.75rem var(--space-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  height: 55px;
   font-family: var(--font-sans);
   font-size: var(--text-base);
   background: var(--color-bg);

@@ -1,7 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
-import { formatPrice } from '../data/vehicles.js'
+import { formatPrice, vehicleHasImages } from '../data/vehicles.js'
+import VehicleImagePlaceholder from './VehicleImagePlaceholder.vue'
 import { flyCardToRequestButton } from '../composables/useFlyToRequest.js'
 
 const props = defineProps({
@@ -42,7 +43,14 @@ function handleToggleSelect() {
       @keydown.enter="$emit('open-detail', vehicle.id)"
     >
       <div class="vehicle-card__image-wrap">
-        <img :src="vehicle.imageUrl" :alt="vehicle.title" class="vehicle-card__image" loading="lazy" />
+        <img
+          v-if="vehicleHasImages(vehicle)"
+          :src="vehicle.imageUrl"
+          :alt="vehicle.title"
+          class="vehicle-card__image"
+          loading="lazy"
+        />
+        <VehicleImagePlaceholder v-else :alt="`${vehicle.title} — no photo available`" />
 
         <button
           type="button"

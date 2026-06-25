@@ -1,5 +1,7 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+import { vehicleHasImages } from '../data/vehicles.js'
+import VehicleImagePlaceholder from './VehicleImagePlaceholder.vue'
 
 const props = defineProps({
   images: {
@@ -13,6 +15,8 @@ const props = defineProps({
 })
 
 const activeIndex = ref(0)
+
+const hasImages = computed(() => vehicleHasImages({ imageUrls: props.images }))
 
 watch(
   () => props.images,
@@ -30,10 +34,12 @@ function selectImage(index) {
   <div class="gallery">
     <div class="gallery__main">
       <img
+        v-if="hasImages"
         :src="images[activeIndex]"
         :alt="`${alt} — photo ${activeIndex + 1} of ${images.length}`"
         class="gallery__main-image"
       />
+      <VehicleImagePlaceholder v-else :alt="`${alt} — no photo available`" />
     </div>
 
     <div v-if="images.length > 1" class="gallery__thumbs" role="tablist" aria-label="Vehicle photos">
@@ -64,7 +70,7 @@ function selectImage(index) {
 .gallery__main {
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: var(--color-bg-card);
+  background: var(--color-bg-muted);
 }
 
 .gallery__main-image {

@@ -1,7 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
-import { formatPrice } from '../data/vehicles.js'
+import { formatPrice, vehicleHasImages } from '../data/vehicles.js'
+import VehicleImagePlaceholder from './VehicleImagePlaceholder.vue'
 import { flyCardToRequestButton } from '../composables/useFlyToRequest.js'
 
 const props = defineProps({
@@ -95,13 +96,24 @@ function handleToggleSelect(vehicle) {
             </span>
           </td>
           <td class="vehicle-table__cell-image">
-            <img
+            <div
               :ref="(el) => setThumbRef(vehicle.id, el)"
-              :src="vehicle.imageUrl"
-              :alt="vehicle.title"
-              class="vehicle-table__thumb"
-              loading="lazy"
-            />
+              class="vehicle-table__thumb-wrap"
+            >
+              <img
+                v-if="vehicleHasImages(vehicle)"
+                :src="vehicle.imageUrl"
+                :alt="vehicle.title"
+                class="vehicle-table__thumb"
+                loading="lazy"
+              />
+              <VehicleImagePlaceholder
+                v-else
+                compact
+                :alt="`${vehicle.title} — no photo available`"
+                class="vehicle-table__thumb"
+              />
+            </div>
           </td>
           <td class="vehicle-table__cell-title">{{ vehicle.title }}</td>
           <td class="vehicle-table__cell-vin">{{ vehicle.vin }}</td>
@@ -218,6 +230,11 @@ function handleToggleSelect(vehicle) {
   font-size: 0.8125rem;
   color: var(--color-text-muted);
   white-space: nowrap;
+}
+
+.vehicle-table__thumb-wrap {
+  width: 56px;
+  height: 38px;
 }
 
 .vehicle-table__thumb {

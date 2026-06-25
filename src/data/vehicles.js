@@ -91,6 +91,13 @@ const models = {
 
 const PLACEHOLDER = '/assets/truck-placeholder.jpg'
 
+/** Demo vehicles with no photos — exercises the missing-image placeholder UI */
+const NO_IMAGE_VEHICLE_IDS = new Set(['5', '23'])
+
+export function vehicleHasImages(vehicle) {
+  return Boolean(vehicle?.imageUrls?.length)
+}
+
 function generateVin(seed) {
   const chars = '0123456789ABCDEFGHJKLMNPRSTUVWXYZ'
   let vin = ''
@@ -101,9 +108,12 @@ function generateVin(seed) {
 }
 
 function buildImageUrls(seed) {
+  if (NO_IMAGE_VEHICLE_IDS.has(String(seed))) {
+    return []
+  }
   // Dummy gallery — replace with real URLs from API
   const count = 2 + (seed % 3)
-  return Array.from({ length: count }, (_, i) => PLACEHOLDER)
+  return Array.from({ length: count }, () => PLACEHOLDER)
 }
 
 function buildCatalog() {
@@ -134,7 +144,7 @@ function buildCatalog() {
           truckType,
           rearWheel,
           drive,
-          imageUrl: imageUrls[0],
+          imageUrl: imageUrls[0] ?? null,
           imageUrls,
           engine: isVan ? `${make} ${variant % 2 === 0 ? '3.5L EcoBoost' : '3.5L V6'}` : engines[make],
           transmission: isVan ? '10-speed automatic' : '10-speed auto',
