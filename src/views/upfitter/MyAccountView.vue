@@ -2,6 +2,7 @@
 import { ref, inject } from 'vue'
 import { Icon } from '@iconify/vue'
 import { updateUpfitterProfile } from '../../data/upfitter.js'
+import { resolvePublicUrl } from '../../utils/publicUrl.js'
 
 const session = inject('session')
 
@@ -71,7 +72,7 @@ async function handleSave() {
       </div>
 
       <div class="account__logo-preview">
-        <img :src="editForm.logoUrl" :alt="editForm.companyName" class="account__logo-img" />
+        <img :src="resolvePublicUrl(editForm.logoUrl)" :alt="editForm.companyName" class="account__logo-img" />
       </div>
 
       <div class="account__fields">

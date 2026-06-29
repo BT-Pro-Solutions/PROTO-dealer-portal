@@ -1,5 +1,6 @@
 <script setup>
 import { upfitterProfile } from '../data/dealer.js'
+import { resolvePublicUrl } from '../utils/publicUrl.js'
 
 defineProps({
   alt: {
@@ -21,7 +22,7 @@ defineProps({
     :aria-label="alt"
   >
     <img
-      :src="upfitterProfile.logoUrl"
+      :src="resolvePublicUrl(upfitterProfile.logoUrl)"
       :alt="upfitterProfile.logoAlt"
       class="vehicle-image-placeholder__logo"
       aria-hidden="true"

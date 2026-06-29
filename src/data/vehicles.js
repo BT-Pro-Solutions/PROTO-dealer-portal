@@ -69,7 +69,7 @@ const models = {
   Ram: ['5500 Chassis Cab', '4500 Chassis Cab', 'ProMaster Van'],
 }
 
-const PLACEHOLDER = '/assets/truck-placeholder.jpg'
+const PLACEHOLDER = `${import.meta.env.BASE_URL}assets/truck-placeholder.jpg`
 
 /** Demo vehicles with no photos — exercises the missing-image placeholder UI */
 const NO_IMAGE_VEHICLE_IDS = new Set(['5', '23'])

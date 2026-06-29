@@ -2,8 +2,10 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { signIn } from '../../composables/useAuth.js'
+import { resolvePublicUrl } from '../../utils/publicUrl.js'
 
 const router = useRouter()
+const brandLogo = resolvePublicUrl('/assets/Dealer-Logo.svg')
 
 const email = ref('')
 const password = ref('')
@@ -23,7 +25,7 @@ function handleSubmit() {
   <div class="portal-login" data-portal="upfitter">
     <div class="portal-login__panel reveal reveal--down">
       <img
-        src="/assets/Dealer-Logo.svg"
+        :src="brandLogo"
         alt="Zoresco"
         class="portal-login__logo"
         width="200"

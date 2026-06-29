@@ -1,6 +1,6 @@
 <template>
   <section class="upfitter-promo" aria-labelledby="upfitter-promo-heading">
-    <img :src="profile.logoUrl" :alt="profile.logoAlt" class="upfitter-promo__logo" />
+    <img :src="resolvePublicUrl(profile.logoUrl)" :alt="profile.logoAlt" class="upfitter-promo__logo" />
 
     <div class="upfitter-promo__content">
       <h2 id="upfitter-promo-heading" class="upfitter-promo__heading">{{ profile.headline }}</h2>
@@ -12,6 +12,8 @@
 </template>
 
 <script setup>
+import { resolvePublicUrl } from '../utils/publicUrl.js'
+
 defineProps({
   profile: {
     type: Object,

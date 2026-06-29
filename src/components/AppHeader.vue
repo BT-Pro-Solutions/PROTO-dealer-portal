@@ -6,6 +6,9 @@ import { useVehicleSelection } from '../composables/useVehicleSelection.js'
 import { useInventorySearch, inventorySearchRoute, syncInventorySearchFromRoute } from '../composables/useInventorySearch.js'
 import { useDealerQuotes } from '../composables/useDealerQuotes.js'
 import { requestButtonRef } from '../composables/useFlyToRequest.js'
+import { resolvePublicUrl } from '../utils/publicUrl.js'
+
+const brandLogo = resolvePublicUrl('/assets/Dealer-Logo.svg')
 
 defineProps({
   session: {
@@ -122,7 +125,7 @@ onUnmounted(() => {
     <div class="header__inner">
       <RouterLink :to="{ name: 'dealer-inventory' }" class="header__brand">
         <div class="header__logo">
-          <img src="/assets/Dealer-Logo.svg" alt="" class="header__logo-img" />
+          <img :src="brandLogo" alt="" class="header__logo-img" />
         </div>
       </RouterLink>
 

@@ -5,6 +5,7 @@ import { Icon } from '@iconify/vue'
 import { useUpfitterQuotes } from '../../composables/useUpfitterQuotes.js'
 import { useUpfitterNotifications } from '../../composables/useUpfitterNotifications.js'
 import { searchUpfitters } from '../../data/upfitter.js'
+import { resolvePublicUrl } from '../../utils/publicUrl.js'
 
 defineProps({
   session: {
@@ -138,7 +139,7 @@ onUnmounted(() => {
     <div class="header__inner">
       <RouterLink :to="{ name: 'upfitter-dashboard' }" class="header__brand">
         <div class="header__logo">
-          <img :src="session.logoUrl" :alt="session.logoAlt ?? session.companyName" class="header__logo-img" />
+          <img :src="resolvePublicUrl(session.logoUrl)" :alt="session.logoAlt ?? session.companyName" class="header__logo-img" />
         </div>
       </RouterLink>
 
@@ -184,7 +185,7 @@ onUnmounted(() => {
             <ul v-if="searchResults.length" class="header__search-results">
               <li v-for="result in searchResults" :key="result.id">
                 <button type="button" class="header__search-result">
-                  <img v-if="result.logoUrl" :src="result.logoUrl" alt="" class="header__search-result-logo" />
+                  <img v-if="result.logoUrl" :src="resolvePublicUrl(result.logoUrl)" alt="" class="header__search-result-logo" />
                   {{ result.name }}
                 </button>
               </li>
