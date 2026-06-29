@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useDealerQuotes } from '../../composables/useDealerQuotes.js'
 import { formatQuoteDate } from '../../data/quotes.js'
-import { formatPrice } from '../../data/vehicles.js'
 
 const { quotes, loadQuotes } = useDealerQuotes()
 const searchQuery = ref('')
@@ -22,10 +21,6 @@ const filteredQuotes = computed(() => {
       quote.customer.name.toLowerCase().includes(q),
   )
 })
-
-function statusLabel(status) {
-  return status === 'quoted' ? 'Quoted' : 'Submitted'
-}
 </script>
 
 <template>
@@ -35,9 +30,9 @@ function statusLabel(status) {
       Back to inventory
     </RouterLink>
     
-    <h1 class="quotes__title reveal">My Quotes</h1>
+    <h1 class="quotes__title reveal">My Requests</h1>
     <p class="quotes__subtitle reveal reveal--delay-1">
-      Previously submitted quote requests and upfitter responses.
+      Previously submitted requests for information sent to your upfitter.
     </p>
 
     <div class="quotes__search reveal reveal--delay-2">
@@ -46,7 +41,7 @@ function statusLabel(status) {
         v-model="searchQuery"
         type="search"
         class="quotes__search-input"
-        placeholder="Search by quote ID or customer name"
+        placeholder="Search by request ID or customer name"
       />
     </div>
 
@@ -56,12 +51,7 @@ function statusLabel(status) {
           <div class="quotes__item-main">
             <div class="quotes__item-top">
               <span class="quotes__item-id">{{ quote.id }}</span>
-              <span
-                class="quotes__status"
-                :class="quote.status === 'quoted' ? 'quotes__status--quoted' : 'quotes__status--submitted'"
-              >
-                {{ statusLabel(quote.status) }}
-              </span>
+              <span class="quotes__status">Submitted</span>
             </div>
             <p class="quotes__item-customer">{{ quote.customer.name }}</p>
             <p class="quotes__item-meta">
@@ -70,8 +60,6 @@ function statusLabel(status) {
             </p>
           </div>
           <div class="quotes__item-right">
-            <span v-if="quote.quotedTotal" class="quotes__item-total">{{ formatPrice(quote.quotedTotal) }}</span>
-            <span v-else class="quotes__item-pending">Awaiting quote</span>
             <Icon icon="mdi:chevron-right" width="22" height="22" aria-hidden="true" />
           </div>
         </RouterLink>
@@ -79,7 +67,7 @@ function statusLabel(status) {
     </ul>
 
     <p v-else class="quotes__empty reveal reveal--delay-3">
-      {{ searchQuery.trim() ? 'No quotes match your search.' : 'No quotes yet. Submit a request from inventory to get started.' }}
+      {{ searchQuery.trim() ? 'No requests match your search.' : 'No requests yet. Submit one from inventory to get started.' }}
     </p>
 
   </div>
@@ -176,16 +164,8 @@ function statusLabel(status) {
   letter-spacing: 0.04em;
   padding: 0.2rem 0.55rem;
   border-radius: var(--radius-chip);
-}
-
-.quotes__status--submitted {
   background: #fff3cd;
   color: #856404;
-}
-
-.quotes__status--quoted {
-  background: var(--color-available);
-  color: #1a5c36;
 }
 
 .quotes__item-customer {
@@ -206,18 +186,6 @@ function statusLabel(status) {
   gap: var(--space-sm);
   flex-shrink: 0;
   text-align: right;
-}
-
-.quotes__item-total {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: var(--text-lg);
-}
-
-.quotes__item-pending {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-text-muted);
 }
 
 .quotes__empty {

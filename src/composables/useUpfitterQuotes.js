@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import { fetchQuotes, submitUpfitterQuote } from '../data/quotes.js'
+import { fetchQuotes, setQuoteReplied as persistQuoteReplied } from '../data/quotes.js'
 
 const quotes = ref([])
 let loadPromise = null
@@ -21,28 +21,19 @@ function refreshQuotes() {
   return loadPromise
 }
 
+function isUnreplied(quote) {
+  return quote.status === 'submitted' && !quote.repliedAt
+}
+
 export function useUpfitterQuotes() {
-  const pendingQuotes = computed(() =>
-    quotes.value.filter((quote) => quote.status === 'submitted'),
-  )
+  const pendingQuotes = computed(() => quotes.value.filter(isUnreplied))
 
   const pendingCount = computed(() => pendingQuotes.value.length)
 
-  const totalQuotedAmount = computed(() =>
-    quotes.value
-      .filter((q) => q.status === 'quoted' && q.quotedTotal != null)
-      .reduce((sum, q) => sum + q.quotedTotal, 0),
-  )
+  const totalRequestCount = computed(() => quotes.value.length)
 
-  function getQuotedTotalForDealership(dealershipId) {
-    return quotes.value
-      .filter(
-        (q) =>
-          q.dealershipId === dealershipId &&
-          q.status === 'quoted' &&
-          q.quotedTotal != null,
-      )
-      .reduce((sum, q) => sum + q.quotedTotal, 0)
+  function getRequestCountForDealership(dealershipId) {
+    return quotes.value.filter((q) => q.dealershipId === dealershipId).length
   }
 
   async function loadQuotes() {
@@ -57,8 +48,8 @@ export function useUpfitterQuotes() {
     return quotes.value.filter((q) => q.dealershipId === dealershipId)
   }
 
-  async function respondToQuote(quoteId, response) {
-    const updated = await submitUpfitterQuote(quoteId, response)
+  async function markQuoteReplied(quoteId, replied) {
+    const updated = await persistQuoteReplied(quoteId, replied)
     if (updated) {
       quotes.value = quotes.value.map((q) => (q.id === updated.id ? updated : q))
     }
@@ -69,12 +60,12 @@ export function useUpfitterQuotes() {
     quotes,
     pendingQuotes,
     pendingCount,
-    totalQuotedAmount,
+    totalRequestCount,
     loadQuotes,
     refreshQuotes,
     getQuote,
     getQuotesForDealership,
-    getQuotedTotalForDealership,
-    respondToQuote,
+    getRequestCountForDealership,
+    markQuoteReplied,
   }
 }

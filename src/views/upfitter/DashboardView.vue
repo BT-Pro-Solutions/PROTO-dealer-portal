@@ -4,12 +4,11 @@ import { Icon } from '@iconify/vue'
 import { useUpfitterQuotes } from '../../composables/useUpfitterQuotes.js'
 import { useUpfitterNotifications } from '../../composables/useUpfitterNotifications.js'
 import { fetchDealerships } from '../../data/upfitter.js'
-import { formatPrice } from '../../data/vehicles.js'
 import { useQuoteVehicleImages } from '../../composables/useQuoteVehicleImages.js'
 import QuoteRequestRow from '../../components/upfitter/QuoteRequestRow.vue'
 
 const session = inject('session')
-const { pendingQuotes, pendingCount, totalQuotedAmount, loadQuotes } = useUpfitterQuotes()
+const { pendingQuotes, pendingCount, totalRequestCount, loadQuotes } = useUpfitterQuotes()
 const { pendingUserRequestCount, loadNotifications } = useUpfitterNotifications()
 const { ensureCatalog } = useQuoteVehicleImages()
 
@@ -23,7 +22,7 @@ onMounted(async () => {
 
 const metrics = computed(() => [
   {
-    label: 'Pending quotes',
+    label: 'Pending requests',
     value: pendingCount.value,
     icon: 'mdi:clipboard-text-outline',
     to: { name: 'upfitter-quotes' },
@@ -44,9 +43,9 @@ const metrics = computed(() => [
     alert: pendingUserRequestCount.value > 0,
   },
   {
-    label: 'Total quoted',
-    value: formatPrice(totalQuotedAmount.value),
-    icon: 'mdi:currency-usd',
+    label: 'Total requests',
+    value: totalRequestCount.value,
+    icon: 'mdi:file-document-outline',
     to: { name: 'upfitter-quotes' },
     alert: false,
   },
@@ -59,7 +58,7 @@ const recentQuotes = computed(() => pendingQuotes.value.slice(0, 3))
   <div class="dashboard page-content page-content--narrow">
     <h1 class="dashboard__title reveal">Welcome, {{ session.userName }}</h1>
     <p class="dashboard__subtitle reveal reveal--delay-1">
-      Manage quote requests, dealership partners, and portal access for {{ session.companyName }}.
+      Manage information requests, dealership partners, and portal access for {{ session.companyName }}.
     </p>
 
     <div class="dashboard__metrics reveal reveal--delay-2">
@@ -82,7 +81,7 @@ const recentQuotes = computed(() => pendingQuotes.value.slice(0, 3))
 
     <section v-if="recentQuotes.length" class="dashboard__quotes reveal reveal--delay-3">
       <div class="dashboard__section-header">
-        <h2 class="dashboard__heading">Recent quote requests</h2>
+        <h2 class="dashboard__heading">Recent information requests</h2>
         <RouterLink :to="{ name: 'upfitter-quotes' }" class="dashboard__link">View all</RouterLink>
       </div>
       <ul class="dashboard__quote-list">

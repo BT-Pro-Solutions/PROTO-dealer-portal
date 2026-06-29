@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import VehicleImageGallery from '../../components/VehicleImageGallery.vue'
 import UpfitterPromo from '../../components/UpfitterPromo.vue'
-import { vehicleDetailFields, formatDetailValue, formatPrice } from '../../data/vehicles.js'
+import { vehicleDetailFields, formatDetailValue } from '../../data/vehicles.js'
 import { fetchUpfitterProfile } from '../../data/dealer.js'
 import { useVehicleSelection } from '../../composables/useVehicleSelection.js'
 import { flyCardToRequestButton } from '../../composables/useFlyToRequest.js'
@@ -53,7 +53,7 @@ function handleToggleQuote() {
 
   const sourceRect = source.getBoundingClientRect()
   const staticClone = source.cloneNode(true)
-  staticClone.textContent = 'Add To Quote'
+  staticClone.textContent = 'Add To Request'
   staticClone.classList.remove('detail__select-btn--selected')
 
   toggleSelection(vehicle.value.id)
@@ -94,10 +94,6 @@ function handleToggleQuote() {
           <div>
             <h1 class="detail__title">{{ vehicle.title }}</h1>
             <p class="detail__meta">{{ vehicle.year }} · {{ vehicle.make }}</p>
-            <p class="detail__price">
-              <span class="detail__price-amount">{{ formatPrice(vehicle.preUpfitPrice) }}</span>
-              <span class="detail__price-label">Pre-upfit pricing</span>
-            </p>
           </div>
 
           <button
@@ -107,7 +103,7 @@ function handleToggleQuote() {
             :class="{ 'detail__select-btn--selected': isSelected(vehicle.id) }"
             @click="handleToggleQuote"
           >
-            {{ isSelected(vehicle.id) ? 'Remove From Quote' : 'Add To Quote' }}
+            {{ isSelected(vehicle.id) ? 'Remove From Request' : 'Add To Request' }}
           </button>
         </div>
         <UpfitterPromo v-if="upfitterProfile" :profile="upfitterProfile" />
@@ -157,25 +153,6 @@ function handleToggleQuote() {
   margin: 0;
   color: var(--color-text-muted);
   font-weight: 400;
-}
-
-.detail__price {
-  margin: var(--space-sm) 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.detail__price-amount {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 900;
-}
-
-.detail__price-label {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--color-text-muted);
 }
 
 .detail__layout {

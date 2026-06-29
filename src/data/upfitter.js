@@ -4,6 +4,9 @@
  */
 
 import { deleteQuotesForDealership } from './quotes.js'
+import { filterOptions } from './vehicles.js'
+
+export const availableTruckBodyStyles = [...filterOptions.truckTypes]
 
 export const upfitterSession = {
   userName: 'Pat Richardson',
@@ -15,10 +18,11 @@ export const upfitterSession = {
   brandColor: '#c41230',
   address: '500 Industrial Parkway, Cleveland, OH 44101',
   hours: 'Mon–Fri, 8:00 AM – 5:00 PM ET',
+  responseDays: 3,
   headline: 'Why buy from Zoresco',
   body: [
     'For over four decades, Zoresco has been a trusted partner to commercial truck dealers nationwide.',
-    'From service bodies and flatbeds to custom upfits, Zoresco delivers quality craftsmanship and competitive pricing.',
+    'From service bodies and flatbeds to custom upfits, Zoresco delivers quality craftsmanship and transparent lead times.',
   ],
 }
 
@@ -33,6 +37,7 @@ export const dealerships = [
     email: 'contact@jaspertrucks.example',
     contactName: 'John Smithington',
     allowedBrands: ['Ford', 'Chevrolet'],
+    allowedTruckBodyStyles: ['Cab Chassis', 'Van'],
   },
   {
     id: 'northland-commercial',
@@ -42,6 +47,7 @@ export const dealerships = [
     email: 'sales@northland.example',
     contactName: 'Sarah Mitchell',
     allowedBrands: ['Ford', 'RAM', 'Freightliner'],
+    allowedTruckBodyStyles: ['Cab Chassis'],
   },
   {
     id: 'river-city-trucks',
@@ -51,6 +57,7 @@ export const dealerships = [
     email: 'fleet@rivercity.example',
     contactName: 'Mike Torres',
     allowedBrands: ['Ford', 'International'],
+    allowedTruckBodyStyles: ['Cab Chassis', 'Van'],
   },
 ]
 
@@ -96,7 +103,7 @@ export const notifications = [
   {
     id: 'notif-1',
     type: 'quote',
-    title: 'New quote request',
+    title: 'New information request',
     message: 'River City Construction submitted REQ-20260320-0881 (2 vehicles).',
     quoteId: 'REQ-20260320-0881',
     dealershipId: 'river-city-trucks',
@@ -167,7 +174,15 @@ function uniqueDealershipId(name) {
   return id
 }
 
-export async function createDealership({ name, contactName, phone, email, address, allowedBrands }) {
+export async function createDealership({
+  name,
+  contactName,
+  phone,
+  email,
+  address,
+  allowedBrands,
+  allowedTruckBodyStyles,
+}) {
   // TODO: return await fetch('/api/upfitter/dealerships', { method: 'POST', ... })
   const dealer = {
     id: uniqueDealershipId(name),
@@ -177,6 +192,7 @@ export async function createDealership({ name, contactName, phone, email, addres
     email: email.trim(),
     address: address.trim(),
     allowedBrands: [...allowedBrands],
+    allowedTruckBodyStyles: [...allowedTruckBodyStyles],
   }
   dealerships.push(dealer)
   dealershipUsers[dealer.id] = []

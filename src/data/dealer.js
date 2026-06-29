@@ -17,6 +17,7 @@ export const upfitterContact = {
   email: 'quotes@zoresco.example',
   address: '500 Industrial Parkway, Cleveland, OH 44101',
   hours: 'Mon–Fri, 8:00 AM – 5:00 PM ET',
+  responseDays: 3,
 }
 
 export const upfitterProfile = {
@@ -26,7 +27,7 @@ export const upfitterProfile = {
   headline: 'Why buy from Zoresco',
   body: [
     'For over four decades, Zoresco has been a trusted partner to commercial truck dealers nationwide. We specialize in chassis upfitting, fleet-ready builds, and turnkey delivery so your customers get on the road faster.',
-    'From service bodies and flatbeds to custom upfits, Zoresco delivers quality craftsmanship, transparent lead times, and competitive pricing built for dealer success.',
+    'From service bodies and flatbeds to custom upfits, Zoresco delivers quality craftsmanship, transparent lead times, and builds designed for dealer success.',
   ],
 }
 

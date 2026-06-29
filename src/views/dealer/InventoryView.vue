@@ -8,7 +8,7 @@ import { useVehicleSelection } from '../../composables/useVehicleSelection.js'
 const catalog = inject('catalog')
 const mobileFiltersOpen = ref(false)
 
-const { filters, sortBy, filteredVehicles, resultCount, setMake, toggleColor, toggleArrayFilter } =
+const { filters, sortBy, filteredVehicles, resultCount, toggleColor, toggleArrayFilter } =
   useVehicleFilters(catalog)
 
 const { toggleSelection, isSelected } = useVehicleSelection()
@@ -29,7 +29,6 @@ const { toggleSelection, isSelected } = useVehicleSelection()
       <SidebarFilters
         class="inventory__sidebar reveal reveal--delay-1"
         :filters="filters"
-        @set-make="setMake"
         @toggle-color="toggleColor"
         @toggle-filter="toggleArrayFilter"
       />

@@ -2,12 +2,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { fetchDealerships } from '../../data/upfitter.js'
-import { formatPrice } from '../../data/vehicles.js'
 import { useUpfitterQuotes } from '../../composables/useUpfitterQuotes.js'
 
 const dealerships = ref([])
 const searchQuery = ref('')
-const { loadQuotes, quotes, getQuotedTotalForDealership } = useUpfitterQuotes()
+const { loadQuotes, quotes, getRequestCountForDealership } = useUpfitterQuotes()
 
 onMounted(async () => {
   await loadQuotes()
@@ -28,7 +27,7 @@ const filteredDealerships = computed(() => {
 
 function pendingQuoteCount(dealershipId) {
   return quotes.value.filter(
-    (q) => q.dealershipId === dealershipId && q.status === 'submitted',
+    (q) => q.dealershipId === dealershipId && q.status === 'submitted' && !q.repliedAt,
   ).length
 }
 </script>
@@ -44,7 +43,7 @@ function pendingQuoteCount(dealershipId) {
       <div>
         <h1 class="dealerships__title">Dealership Partners</h1>
         <p class="dealerships__subtitle reveal reveal--delay-1">
-          Manage contact info, brand access, and quote activity for each dealership.
+          Manage contact info, brand access, truck body styles, and request activity for each dealership.
         </p>
       </div>
       <RouterLink :to="{ name: 'upfitter-dealership-new' }" class="dealerships__add-btn reveal reveal--delay-1">
@@ -75,10 +74,13 @@ function pendingQuoteCount(dealershipId) {
             <span class="dealerships__item-brands">
               {{ dealer.allowedBrands.join(', ') }}
             </span>
+            <span v-if="dealer.allowedTruckBodyStyles?.length" class="dealerships__item-body-styles">
+              {{ dealer.allowedTruckBodyStyles.join(', ') }}
+            </span>
           </div>
           <div class="dealerships__item-right">
-            <span class="dealerships__item-quoted">
-              {{ formatPrice(getQuotedTotalForDealership(dealer.id)) }} quoted
+            <span class="dealerships__item-requests">
+              {{ getRequestCountForDealership(dealer.id) }} request{{ getRequestCountForDealership(dealer.id) === 1 ? '' : 's' }}
             </span>
             <span v-if="pendingQuoteCount(dealer.id) > 0" class="dealerships__item-badge">
               {{ pendingQuoteCount(dealer.id) }} pending
@@ -223,6 +225,12 @@ function pendingQuoteCount(dealershipId) {
   color: var(--color-text-muted);
 }
 
+.dealerships__item-body-styles {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
 .dealerships__item-right {
   display: flex;
   align-items: center;
@@ -230,13 +238,14 @@ function pendingQuoteCount(dealershipId) {
   flex-shrink: 0;
 }
 
-.dealerships__item-quoted {
+.dealerships__item-requests {
   font-family: var(--font-display);
   font-size: var(--text-sm);
   font-weight: 700;
   color: var(--color-text);
   white-space: nowrap;
 }
+
 
 .dealerships__item-badge {
   font-size: var(--text-xs);

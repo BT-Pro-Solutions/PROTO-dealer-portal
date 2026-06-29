@@ -12,45 +12,22 @@ export const filterOptions = {
     { id: 'blue', label: 'Blue', hex: '#1a5276' },
     { id: 'black', label: 'Black', hex: '#1a1a1a' },
   ],
-  truckTypes: ['Cab Chassis', 'Van'],
+  truckTypes: ['Cab Chassis', 'Cutaway', 'Stripped Chassis', 'Van', 'Pickup'],
+  bodyTypes: [
+    'Service body',
+    'Flatbed',
+    'Dump body',
+    'Stake bed',
+    'Box body',
+    'Cargo van',
+    'Utility body',
+    'Platform body',
+  ],
   rearWheels: [
     { id: 'SRW', label: 'Single Rear Wheel' },
     { id: 'DRW', label: 'Double Rear Wheel' },
   ],
   drives: ['4x2', '4x4'],
-  priceRanges: [
-    { id: 'under-50', label: 'Under $50,000', min: 0, max: 50000 },
-    { id: '50-65', label: '$50,000 – $65,000', min: 50000, max: 65000 },
-    { id: '65-80', label: '$65,000 – $80,000', min: 65000, max: 80000 },
-    { id: '80-plus', label: '$80,000+', min: 80000, max: Infinity },
-  ],
-}
-
-export function getPriceRangeIds() {
-  return filterOptions.priceRanges.map((range) => range.id)
-}
-
-function generatePreUpfitPrice(id, make, truckType, variant) {
-  const base = truckType === 'Van' ? 38500 : 54500
-  const makePremium = { Ford: 2500, Chevrolet: 2000, Ram: 1500 }[make] ?? 0
-  const variantBump = variant * 3200 + (id % 11) * 475
-  return Math.round((base + makePremium + variantBump) / 100) * 100
-}
-
-export function formatPrice(amount) {
-  if (amount == null || Number.isNaN(amount)) return '—'
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
-
-export function vehicleMatchesPriceRange(price, rangeId) {
-  const range = filterOptions.priceRanges.find((entry) => entry.id === rangeId)
-  if (!range) return false
-  if (range.max === Infinity) return price >= range.min
-  return price >= range.min && price < range.max
 }
 
 const colorNames = {
@@ -80,7 +57,10 @@ const engines = {
   Ram: '6.7L Cummins',
 }
 
-const bodyTypes = ['Service body', 'Flatbed', 'Dump body', 'Stake bed', 'Box body']
+const bodyTypes = filterOptions.bodyTypes.filter((type) => type !== 'Cargo van')
+const vanBodyTypes = ['Cargo van', 'Box body', 'Utility body']
+const cabTruckTypes = ['Cab Chassis', 'Cutaway', 'Stripped Chassis', 'Pickup']
+const vanTruckTypes = ['Van', 'Cutaway']
 const chassisDueOptions = ['On Ground', 'In Transit', 'Factory Order']
 
 const models = {
@@ -124,12 +104,15 @@ function buildCatalog() {
     for (const model of modelList) {
       for (let variant = 0; variant < 6; variant++) {
         const color = filterOptions.colors[(id + variant) % filterOptions.colors.length]
-        const truckType = variant % 3 === 0 ? 'Van' : 'Cab Chassis'
+        const isVanModel = model.includes('Van')
+        const truckType = isVanModel
+          ? vanTruckTypes[variant % vanTruckTypes.length]
+          : cabTruckTypes[variant % cabTruckTypes.length]
         const rearWheel = variant % 2 === 0 ? 'SRW' : 'DRW'
         const drive = variant % 2 === 0 ? '4x4' : '4x2'
         const year = 2025 + (variant % 2)
         const imageUrls = buildImageUrls(id)
-        const isVan = truckType === 'Van'
+        const isVan = truckType === 'Van' || (isVanModel && truckType === 'Cutaway')
 
         vehicles.push({
           id: String(id),
@@ -151,9 +134,10 @@ function buildCatalog() {
           gvwr: isVan ? '9,070' : String(16500 + (variant % 4) * 1000),
           cabToAxle: isVan ? 'N/A' : String(60 + (variant % 5) * 6),
           wheelbase: isVan ? String(130 + (variant % 3) * 10) : String(158 + (variant % 4) * 15),
-          bodyType: isVan ? 'Cargo van' : bodyTypes[variant % bodyTypes.length],
+          bodyType: isVanModel
+            ? vanBodyTypes[variant % vanBodyTypes.length]
+            : bodyTypes[variant % bodyTypes.length],
           chassisDue: chassisDueOptions[variant % chassisDueOptions.length],
-          preUpfitPrice: generatePreUpfitPrice(id, make, truckType, variant),
         })
         id++
       }
@@ -176,13 +160,12 @@ export async function submitQuoteRequest(payload) {
   //   headers: { 'Content-Type': 'application/json' },
   //   body: JSON.stringify(payload),
   // }).then(r => r.json())
-  console.info('[dummy] Quote request submitted:', payload)
+  console.info('[dummy] Information request submitted:', payload)
   return { success: true, requestId: `REQ-${Date.now()}` }
 }
 
 /** Detail page spec rows — labels spelled out, keys map to vehicle fields */
 export const vehicleDetailFields = [
-  { label: 'Pre-upfit pricing', key: 'preUpfitPrice', format: 'currency' },
   { label: 'VIN', key: 'vin' },
   { label: 'Model code', key: 'modelCode' },
   { label: 'Color', key: 'colorName' },
@@ -201,7 +184,6 @@ export const vehicleDetailFields = [
 export function formatDetailValue(vehicle, field) {
   const raw = vehicle[field.key]
   if (raw == null || raw === '') return '—'
-  if (field.format === 'currency') return formatPrice(raw)
   if (field.suffix && raw !== 'N/A') return `${raw}${field.suffix}`
   return String(raw)
 }

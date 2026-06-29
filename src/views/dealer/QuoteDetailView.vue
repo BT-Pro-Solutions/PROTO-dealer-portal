@@ -3,8 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useDealerQuotes } from '../../composables/useDealerQuotes.js'
-import { fetchQuoteById, sendQuoteToCustomer, formatQuoteDate } from '../../data/quotes.js'
-import { formatPrice } from '../../data/vehicles.js'
+import { fetchQuoteById, formatQuoteDate } from '../../data/quotes.js'
+import { fetchUpfitterContact } from '../../data/dealer.js'
 
 const props = defineProps({
   id: {
@@ -17,19 +17,17 @@ const router = useRouter()
 const { loadQuotes, getQuote } = useDealerQuotes()
 
 const quote = ref(null)
+const upfitter = ref(null)
 const loading = ref(true)
-const sending = ref(false)
-const sendMessage = ref('')
-const sendSuccess = ref(false)
-const sendError = ref(false)
 
-const isQuoted = computed(() => quote.value?.status === 'quoted')
-const subtotalPreUpfit = computed(() =>
-  quote.value?.items.reduce((sum, item) => sum + (item.preUpfitPrice ?? 0), 0) ?? 0,
-)
+const responseDaysLabel = computed(() => {
+  const days = upfitter.value?.responseDays ?? 2
+  return `2 business days`
+})
 
 onMounted(async () => {
   await loadQuotes()
+  upfitter.value = await fetchUpfitterContact()
   quote.value = getQuote(props.id) ?? (await fetchQuoteById(props.id))
   loading.value = false
 
@@ -37,37 +35,17 @@ onMounted(async () => {
     router.replace({ name: 'dealer-my-quotes' })
   }
 })
-
-async function handleSendQuote() {
-  if (!quote.value || !isQuoted.value || sending.value) return
-
-  sending.value = true
-  sendSuccess.value = false
-  sendError.value = false
-
-  try {
-    await sendQuoteToCustomer(quote.value.id, {
-      email: quote.value.customer.email,
-      message: sendMessage.value.trim(),
-    })
-    sendSuccess.value = true
-  } catch {
-    sendError.value = true
-  } finally {
-    sending.value = false
-  }
-}
 </script>
 
 <template>
   <div v-if="loading" class="quote-detail page-content page-content--narrow">
-    <p class="quote-detail__loading">Loading quote…</p>
+    <p class="quote-detail__loading">Loading request…</p>
   </div>
 
   <div v-else-if="quote" class="quote-detail page-content page-content--narrow">
     <RouterLink :to="{ name: 'dealer-my-quotes' }" class="quote-detail__back reveal">
       <Icon icon="mdi:arrow-left" width="18" height="18" aria-hidden="true" />
-      Back to My Quotes
+      Back to My Requests
     </RouterLink>
 
     <div class="quote-detail__header reveal reveal--delay-1">
@@ -75,12 +53,7 @@ async function handleSendQuote() {
         <h1 class="quote-detail__title">{{ quote.id }}</h1>
         <p class="quote-detail__customer">{{ quote.customer.name }}</p>
       </div>
-      <span
-        class="quote-detail__status"
-        :class="isQuoted ? 'quote-detail__status--quoted' : 'quote-detail__status--submitted'"
-      >
-        {{ isQuoted ? 'Quoted' : 'Submitted' }}
-      </span>
+      <span class="quote-detail__status">Submitted</span>
     </div>
 
     <section class="quote-detail__section reveal reveal--delay-2">
@@ -112,10 +85,6 @@ async function handleSendQuote() {
           <dt>Submitted</dt>
           <dd>{{ formatQuoteDate(quote.submittedAt) }}</dd>
         </div>
-        <div class="quote-detail__field">
-          <dt>Quoted</dt>
-          <dd>{{ isQuoted ? formatQuoteDate(quote.quotedAt) : 'Awaiting upfitter response' }}</dd>
-        </div>
       </dl>
     </section>
 
@@ -128,70 +97,14 @@ async function handleSendQuote() {
             <span class="quote-detail__vehicle-vin">{{ item.vin }}</span>
             <p v-if="item.instructions" class="quote-detail__vehicle-notes">{{ item.instructions }}</p>
           </div>
-          <div class="quote-detail__vehicle-prices">
-            <span class="quote-detail__vehicle-pre">{{ formatPrice(item.preUpfitPrice) }} pre-upfit</span>
-            <span v-if="item.quotedPrice" class="quote-detail__vehicle-quoted">{{ formatPrice(item.quotedPrice) }} quoted</span>
-          </div>
         </li>
       </ul>
-
-      <div class="quote-detail__totals">
-        <div class="quote-detail__total-row">
-          <span>Pre-upfit subtotal</span>
-          <span>{{ formatPrice(subtotalPreUpfit) }}</span>
-        </div>
-        <div v-if="isQuoted" class="quote-detail__total-row quote-detail__total-row--quoted">
-          <span>Quoted total</span>
-          <span>{{ formatPrice(quote.quotedTotal) }}</span>
-        </div>
-      </div>
     </section>
 
-    <section v-if="isQuoted" class="quote-detail__section reveal reveal--delay-5">
-      <h2 class="quote-detail__heading">Send to customer</h2>
+    <section class="quote-detail__section quote-detail__section--muted reveal reveal--delay-5">
       <p class="quote-detail__note">
-        Email this quote to {{ quote.customer.name }} at {{ quote.customer.email }}.
-      </p>
-
-      <div
-        v-if="sendSuccess"
-        class="quote-detail__message quote-detail__message--success"
-        role="status"
-      >
-        Quote sent successfully.
-      </div>
-      <div
-        v-if="sendError"
-        class="quote-detail__message quote-detail__message--error"
-        role="status"
-      >
-        Unable to send quote. Please try again.
-      </div>
-
-      <label class="quote-detail__label">
-        Optional message
-        <textarea
-          v-model="sendMessage"
-          class="quote-detail__textarea"
-          rows="3"
-          placeholder="Add a personal note to include in the email…"
-        ></textarea>
-      </label>
-
-      <button
-        type="button"
-        class="quote-detail__send-btn"
-        :disabled="sending"
-        @click="handleSendQuote"
-      >
-        <Icon icon="mdi:email-outline" width="20" height="20" aria-hidden="true" />
-        {{ sending ? 'Sending…' : 'Send quote via email' }}
-      </button>
-    </section>
-
-    <section v-else class="quote-detail__section quote-detail__section--muted reveal reveal--delay-5">
-      <p class="quote-detail__note">
-        This request has been submitted to your upfitter. You'll be able to send the quote to your customer once pricing is ready.
+        Your upfitter will be in contact with you regarding this request within
+        {{ responseDaysLabel }}.
       </p>
     </section>
   </div>
@@ -246,16 +159,8 @@ async function handleSendQuote() {
   letter-spacing: 0.04em;
   padding: 0.35rem 0.75rem;
   border-radius: var(--radius-chip);
-}
-
-.quote-detail__status--submitted {
   background: #fff3cd;
   color: #856404;
-}
-
-.quote-detail__status--quoted {
-  background: var(--color-available);
-  color: #1a5c36;
 }
 
 .quote-detail__section {
@@ -296,7 +201,7 @@ async function handleSendQuote() {
 
 .quote-detail__vehicles {
   list-style: none;
-  margin: 0 0 var(--space-lg);
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -304,9 +209,6 @@ async function handleSendQuote() {
 }
 
 .quote-detail__vehicle {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-md);
   padding: var(--space-md);
   background: #fff;
   border-radius: var(--radius-sm);
@@ -336,113 +238,10 @@ async function handleSendQuote() {
   color: var(--color-text-muted);
 }
 
-.quote-detail__vehicle-prices {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.15rem;
-  flex-shrink: 0;
-  text-align: right;
-}
-
-.quote-detail__vehicle-pre {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.quote-detail__vehicle-quoted {
-  font-family: var(--font-display);
-  font-weight: 800;
-}
-
-.quote-detail__totals {
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  padding-top: var(--space-md);
-}
-
-.quote-detail__total-row {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-md);
-  font-size: var(--text-base);
-  margin-bottom: 0.35rem;
-}
-
-.quote-detail__total-row--quoted {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: var(--text-lg);
-  margin-top: var(--space-sm);
-  margin-bottom: 0;
-}
-
 .quote-detail__note {
-  margin: 0 0 var(--space-md);
+  margin: 0;
   color: var(--color-text-muted);
   font-size: var(--text-sm);
-}
-
-.quote-detail__message {
-  margin-bottom: var(--space-md);
-  padding: var(--space-md);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-sm);
-  font-weight: 500;
-}
-
-.quote-detail__message--success {
-  background: var(--color-available);
-}
-
-.quote-detail__message--error {
-  background: var(--color-on-hold);
-}
-
-.quote-detail__label {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  margin-bottom: var(--space-md);
-}
-
-.quote-detail__textarea {
-  font-family: var(--font-sans);
-  font-size: var(--text-base);
-  padding: 0.65rem 0.85rem;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: var(--radius-sm);
-  background: #fff;
-  resize: vertical;
-  min-height: 80px;
-}
-
-.quote-detail__textarea:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
-}
-
-.quote-detail__send-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--color-primary);
-  color: var(--color-text-inverse);
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--text-base);
-  padding: 0.85rem 1.5rem;
-  border-radius: var(--radius-sm);
-}
-
-.quote-detail__send-btn:hover:not(:disabled) {
-  opacity: 0.85;
-}
-
-.quote-detail__send-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  line-height: 1.5;
 }
 </style>

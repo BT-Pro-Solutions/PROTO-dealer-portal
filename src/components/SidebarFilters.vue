@@ -9,7 +9,7 @@ defineProps({
   },
 })
 
-const emit = defineEmits(['set-make', 'toggle-color', 'toggle-filter'])
+const emit = defineEmits(['toggle-color', 'toggle-filter'])
 </script>
 
 <template>
@@ -22,8 +22,9 @@ const emit = defineEmits(['set-make', 'toggle-color', 'toggle-filter'])
           :key="make"
           type="button"
           class="sidebar__pill"
-          :class="{ 'sidebar__pill--active': filters.make === make }"
-          @click="$emit('set-make', make)"
+          :class="{ 'sidebar__pill--active': filters.makes.includes(make) }"
+          :aria-pressed="filters.makes.includes(make)"
+          @click="$emit('toggle-filter', 'makes', make)"
         >
           {{ make }}
         </button>
@@ -67,6 +68,22 @@ const emit = defineEmits(['set-make', 'toggle-color', 'toggle-filter'])
     </section>
 
     <section class="sidebar__section">
+      <h2 class="sidebar__heading">Body Type</h2>
+      <ul class="sidebar__checkboxes">
+        <li v-for="type in filterOptions.bodyTypes" :key="type">
+          <label class="sidebar__checkbox-label">
+            <input
+              type="checkbox"
+              :checked="filters.bodyTypes.includes(type)"
+              @change="$emit('toggle-filter', 'bodyTypes', type)"
+            />
+            <span>{{ type }}</span>
+          </label>
+        </li>
+      </ul>
+    </section>
+
+    <section class="sidebar__section">
       <h2 class="sidebar__heading">Rear Wheel</h2>
       <ul class="sidebar__checkboxes">
         <li v-for="wheel in filterOptions.rearWheels" :key="wheel.id">
@@ -93,22 +110,6 @@ const emit = defineEmits(['set-make', 'toggle-color', 'toggle-filter'])
               @change="$emit('toggle-filter', 'drives', drive)"
             />
             <span>{{ drive }}</span>
-          </label>
-        </li>
-      </ul>
-    </section>
-
-    <section class="sidebar__section">
-      <h2 class="sidebar__heading">Pre-upfit Price</h2>
-      <ul class="sidebar__checkboxes">
-        <li v-for="range in filterOptions.priceRanges" :key="range.id">
-          <label class="sidebar__checkbox-label">
-            <input
-              type="checkbox"
-              :checked="filters.priceRanges.includes(range.id)"
-              @change="$emit('toggle-filter', 'priceRanges', range.id)"
-            />
-            <span>{{ range.label }}</span>
           </label>
         </li>
       </ul>

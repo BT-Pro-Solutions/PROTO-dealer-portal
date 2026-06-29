@@ -3,7 +3,7 @@ import { ref, computed, inject, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { fetchUpfitterContact } from '../../data/dealer.js'
-import { submitQuoteRequest, formatPrice } from '../../data/vehicles.js'
+import { submitQuoteRequest } from '../../data/vehicles.js'
 import { useVehicleSelection } from '../../composables/useVehicleSelection.js'
 import { useQuoteDraft } from '../../composables/useQuoteDraft.js'
 import { useDealerQuotes } from '../../composables/useDealerQuotes.js'
@@ -33,9 +33,10 @@ const selectedVehicles = computed(() =>
     .filter(Boolean),
 )
 
-const subtotal = computed(() =>
-  selectedVehicles.value.reduce((sum, vehicle) => sum + (vehicle.preUpfitPrice ?? 0), 0),
-)
+const responseDaysLabel = computed(() => {
+  const days = upfitter.value?.responseDays ?? 3
+  return `${days} business day${days === 1 ? '' : 's'}`
+})
 
 onMounted(async () => {
   upfitter.value = await fetchUpfitterContact()
@@ -73,7 +74,7 @@ async function handleSubmit() {
     clearAllInstructions()
     clearCustomerInfo()
   } catch {
-    alert('Unable to submit quote request. Please try again.')
+    alert('Unable to submit request. Please try again.')
   } finally {
     submitting.value = false
   }
@@ -86,8 +87,9 @@ async function handleSubmit() {
       <div class="quote__thank-you reveal">
         <h1 class="quote__title">Thank you!</h1>
         <p class="quote__message">
-          Your quote request has been submitted to {{ upfitter?.name ?? 'Zoresco' }}.
-          You should expect a quote soon — typically within one business day.
+          Your request for information has been submitted to {{ upfitter?.name ?? 'your upfitter' }}.
+          Your upfitter will be in contact with you regarding this request within
+          {{ responseDaysLabel }}.
         </p>
         <RouterLink :to="{ name: 'dealer-inventory' }" class="quote__btn">Back to inventory</RouterLink>
       </div>
@@ -95,11 +97,10 @@ async function handleSubmit() {
 
     <template v-else>
       <h1 class="quote__title reveal">
-        Request a Quote for {{ selectedVehicles.length }} Truck{{ selectedVehicles.length === 1 ? '' : 's' }}
+        Request Information for {{ selectedVehicles.length }} Truck{{ selectedVehicles.length === 1 ? '' : 's' }}
       </h1>
       <p class="quote__subtitle reveal reveal--delay-1">
-        Review your selected vehicles, add instructions for each, and submit to
-        {{ upfitter?.name ?? 'your upfitter' }}.
+        {{ upfitter?.name ?? 'your upfitter' }} will be in contact with you regarding this request within two business days.
       </p>
 
       <div class="quote__layout">
@@ -107,7 +108,7 @@ async function handleSubmit() {
           <section class="quote__customer reveal reveal--delay-2">
             <h2 class="quote__customer-heading">Customer information</h2>
             <p class="quote__customer-note">
-              Who is this quote for? This will be attached to the request for your upfitter.
+              Who is this request for? This will be attached to the request for your upfitter.
             </p>
             <div class="quote__customer-fields">
               <label class="quote__field">
@@ -167,10 +168,6 @@ async function handleSubmit() {
                   <p class="quote-item__meta">
                     {{ vehicle.year }} · {{ vehicle.rearWheel }} · {{ vehicle.drive }}
                   </p>
-                  <p class="quote-item__price">
-                    {{ formatPrice(vehicle.preUpfitPrice) }}
-                    <span class="quote-item__price-note">pre-upfit pricing</span>
-                  </p>
                 </div>
               </div>
               <button type="button" class="quote-item__remove" @click="removeVehicle(vehicle.id)">
@@ -198,7 +195,7 @@ async function handleSubmit() {
             :disabled="submitting || selectedVehicles.length === 0"
             @click="handleSubmit"
           >
-            {{ submitting ? 'Submitting…' : `Submit ${selectedVehicles.length} Truck${selectedVehicles.length === 1 ? '' : 's'} for Quote` }}
+            Send Request
           </button>
         </div>
 
@@ -224,12 +221,9 @@ async function handleSubmit() {
             </div>
           </dl>
 
-          <div class="quote__subtotal">
-            <span class="quote__subtotal-label">Subtotal (pre-upfit pricing)</span>
-            <span class="quote__subtotal-amount">{{ formatPrice(subtotal) }}</span>
-          </div>
-          <p class="quote__subtotal-note">
-            Final quote may vary after upfit options and fees.
+          <p class="quote__contact-note">
+            After submitting, your upfitter will follow up directly — typically within
+            {{ responseDaysLabel }}.
           </p>
 
           <button
@@ -238,7 +232,7 @@ async function handleSubmit() {
             :disabled="submitting || selectedVehicles.length === 0"
             @click="handleSubmit"
           >
-            {{ submitting ? 'Submitting…' : `Submit ${selectedVehicles.length} Truck${selectedVehicles.length === 1 ? '' : 's'} for Quote` }}
+            Send Request
           </button>
         </aside>
       </div>
@@ -376,20 +370,6 @@ async function handleSubmit() {
   font-size: var(--text-sm);
 }
 
-.quote-item__price {
-  margin: 0.35rem 0 0;
-  font-family: var(--font-display);
-  font-size: var(--text-base);
-  font-weight: 800;
-}
-
-.quote-item__price-note {
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--color-text-muted);
-}
-
 .quote-item__remove {
   font-size: var(--text-sm);
   font-weight: 600;
@@ -451,7 +431,7 @@ async function handleSubmit() {
 .quote__contact-fields {
   display: grid;
   gap: var(--space-md);
-  margin: 0 0 var(--space-xl);
+  margin: 0 0 var(--space-lg);
 }
 
 .quote__contact-fields dt {
@@ -470,30 +450,7 @@ async function handleSubmit() {
   color: #fff;
 }
 
-.quote__subtotal {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-md);
-  padding: var(--space-md) 0;
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
-  margin-bottom: var(--space-sm);
-}
-
-.quote__subtotal-label {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: #ccc;
-}
-
-.quote__subtotal-amount {
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
-  font-weight: 900;
-}
-
-.quote__subtotal-note {
+.quote__contact-note {
   margin: 0 0 var(--space-xl);
   font-size: var(--text-sm);
   color: #ccc;

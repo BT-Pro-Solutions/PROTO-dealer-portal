@@ -67,7 +67,7 @@ function openDetail(id) {
             aria-label="Table view"
             @click="setViewMode('table')"
           >
-            <Icon icon="mdi:table" width="20" height="20" aria-hidden="true" />
+            <Icon icon="mdi:view-list" width="20" height="20" aria-hidden="true" />
           </button>
         </div>
 
@@ -96,8 +96,6 @@ function openDetail(id) {
             <option value="make_model">Make &amp; Model</option>
             <option value="year_desc">Year (Newest)</option>
             <option value="year_asc">Year (Oldest)</option>
-            <option value="price_asc">Price (Low to High)</option>
-            <option value="price_desc">Price (High to Low)</option>
           </select>
           <Icon icon="mdi:chevron-down" class="vehicle-grid-section__sort-icon" width="18" height="18" aria-hidden="true" />
         </span>

@@ -28,15 +28,10 @@ export function useQuoteVehicleImages() {
       .slice(0, 3)
   }
 
-  function baseValue(quote) {
-    return quote.items.reduce((sum, item) => sum + (item.preUpfitPrice ?? 0), 0)
-  }
-
   return {
     catalog,
     ensureCatalog,
     vehicleImage,
     quoteImages,
-    baseValue,
   }
 }

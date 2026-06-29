@@ -24,7 +24,7 @@ const route = useRoute()
 const router = useRouter()
 const { selectedCount } = useVehicleSelection()
 const { searchQuery } = useInventorySearch()
-const { pendingCount, loadQuotes } = useDealerQuotes()
+const { loadQuotes } = useDealerQuotes()
 
 const isQuoteRequestPage = computed(() => route.name === 'dealer-quote-request')
 
@@ -161,10 +161,9 @@ onUnmounted(() => {
         <RouterLink
           :to="{ name: 'dealer-my-quotes' }"
           class="header__quotes-btn"
-          aria-label="My Quotes"
+          aria-label="My Requests"
         >
           <Icon icon="mdi:clipboard-text-outline" width="22" height="22" aria-hidden="true" />
-          <span v-if="pendingCount > 0" class="header__quotes-badge">{{ pendingCount }}</span>
         </RouterLink>
 
         <div ref="accountMenuRef" class="header__account-menu">
@@ -224,14 +223,14 @@ onUnmounted(() => {
           <button
             type="button"
             class="header__request-btn"
-            :aria-label="`Start quote request (${selectedCount} selected)`"
+            :aria-label="`Start information request (${selectedCount} selected)`"
             :tabindex="selectedCount > 0 ? 0 : -1"
             :aria-hidden="selectedCount === 0"
             @click="goToQuoteRequest"
           >
             <Icon icon="mdi:clipboard-plus-outline" class="header__request-icon" width="22" height="22" aria-hidden="true" />
             <span class="header__request-label">
-              Quote
+              Request
               <span class="header__request-count">{{ selectedCount }}</span>
             </span>
             <span v-if="selectedCount > 0" class="header__request-badge">{{ selectedCount }}</span>

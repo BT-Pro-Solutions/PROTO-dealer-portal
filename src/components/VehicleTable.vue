@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
-import { formatPrice, vehicleHasImages } from '../data/vehicles.js'
+import { vehicleHasImages } from '../data/vehicles.js'
 import VehicleImagePlaceholder from './VehicleImagePlaceholder.vue'
 import { flyCardToRequestButton } from '../composables/useFlyToRequest.js'
 
@@ -57,7 +57,6 @@ function handleToggleSelect(vehicle) {
           <th scope="col">Year</th>
           <th scope="col">Rear Wheel</th>
           <th scope="col">Drive</th>
-          <th class="vehicle-table__col-price" scope="col">Price</th>
         </tr>
       </thead>
       <tbody>
@@ -120,7 +119,6 @@ function handleToggleSelect(vehicle) {
           <td>{{ vehicle.year }}</td>
           <td>{{ vehicle.rearWheel }}</td>
           <td>{{ vehicle.drive }}</td>
-          <td class="vehicle-table__cell-price">{{ formatPrice(vehicle.preUpfitPrice) }}</td>
         </tr>
       </tbody>
     </table>
@@ -210,14 +208,6 @@ function handleToggleSelect(vehicle) {
 .vehicle-table__cell-image {
   width: 72px;
   padding-right: 0.35rem;
-}
-
-.vehicle-table__col-price,
-.vehicle-table__cell-price {
-  text-align: right;
-  white-space: nowrap;
-  font-family: var(--font-display);
-  font-weight: 700;
 }
 
 .vehicle-table__cell-title {

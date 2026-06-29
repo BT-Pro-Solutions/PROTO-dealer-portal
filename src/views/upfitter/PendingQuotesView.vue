@@ -39,9 +39,9 @@ const filteredQuotes = computed(() => {
       break
     default:
       list.sort((a, b) => {
-        const aPending = a.status === 'submitted' ? 0 : 1
-        const bPending = b.status === 'submitted' ? 0 : 1
-        if (aPending !== bPending) return aPending - bPending
+        const aReplied = a.repliedAt ? 1 : 0
+        const bReplied = b.repliedAt ? 1 : 0
+        if (aReplied !== bReplied) return aReplied - bReplied
         return new Date(b.submittedAt) - new Date(a.submittedAt)
       })
   }
@@ -58,11 +58,11 @@ const filteredQuotes = computed(() => {
     </RouterLink>
 
     <div class="quotes__header reveal">
-      <h1 class="quotes__title">Quote Requests</h1>
+      <h1 class="quotes__title">Information Requests</h1>
       <label class="quotes__sort">
         <span class="quotes__sort-label">Sort By:</span>
         <select v-model="sortBy" class="quotes__sort-select">
-          <option value="unreviewed">Unreviewed</option>
+          <option value="unreviewed">Unreplied first</option>
           <option value="newest">Newest</option>
           <option value="oldest">Oldest</option>
           <option value="dealership">Dealership</option>
@@ -76,7 +76,7 @@ const filteredQuotes = computed(() => {
         v-model="searchQuery"
         type="search"
         class="quotes__search-input"
-        placeholder="Search by quote ID, dealership, or customer"
+        placeholder="Search by request ID, dealership, or customer"
       />
     </div>
 
@@ -87,7 +87,7 @@ const filteredQuotes = computed(() => {
     </ul>
 
     <p v-else class="quotes__empty reveal reveal--delay-2">
-      {{ searchQuery.trim() ? 'No quotes match your search.' : 'No quote requests yet.' }}
+      {{ searchQuery.trim() ? 'No requests match your search.' : 'No information requests yet.' }}
     </p>
   </div>
 </template>

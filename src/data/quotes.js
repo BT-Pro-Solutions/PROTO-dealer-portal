@@ -4,9 +4,8 @@ const DELETED_QUOTES_KEY = 'dealer-quotes-deleted'
 const seedQuotes = [
   {
     id: 'REQ-20260318-1042',
-    status: 'quoted',
+    status: 'submitted',
     submittedAt: '2026-03-15T14:22:00.000Z',
-    quotedAt: '2026-03-16T09:15:00.000Z',
     dealershipId: 'jasper-truck-sales',
     dealershipName: "Jasper Truck Sales",
     customer: {
@@ -20,18 +19,14 @@ const seedQuotes = [
         vehicleId: '3',
         title: 'Ford F-450 Super Duty',
         vin: 'XAP3GW9N2FV8M1EU7',
-        preUpfitPrice: 67700,
         instructions: 'Flatbed upfit with toolboxes. Need delivery by end of April.',
-        quotedPrice: 89400,
       },
     ],
-    quotedTotal: 89400,
   },
   {
     id: 'REQ-20260320-0881',
     status: 'submitted',
     submittedAt: '2026-03-20T11:05:00.000Z',
-    quotedAt: null,
     dealershipId: 'river-city-trucks',
     dealershipName: 'River City Truck Center',
     customer: {
@@ -45,26 +40,20 @@ const seedQuotes = [
         vehicleId: '7',
         title: 'Ford F-550 Super Duty',
         vin: 'M1EU7L0DT6KZCS5JY',
-        preUpfitPrice: 64800,
         instructions: 'Service body, crane prep, white exterior.',
-        quotedPrice: null,
       },
       {
         vehicleId: '8',
         title: 'Ford F-550 Super Duty',
         vin: '9N2FV8M1EU7L0DT6K',
-        preUpfitPrice: 75900,
         instructions: 'Matching pair for fleet order.',
-        quotedPrice: null,
       },
     ],
-    quotedTotal: null,
   },
   {
     id: 'REQ-20260310-0315',
-    status: 'quoted',
+    status: 'submitted',
     submittedAt: '2026-03-10T16:40:00.000Z',
-    quotedAt: '2026-03-12T10:30:00.000Z',
     dealershipId: 'northland-commercial',
     dealershipName: 'Northland Commercial Trucks',
     customer: {
@@ -78,12 +67,9 @@ const seedQuotes = [
         vehicleId: '1',
         title: 'Ford F-350 Super Duty',
         vin: 'ZCS5JYBR4HXAP3GW9',
-        preUpfitPrice: 61600,
         instructions: 'Stake bed, gooseneck prep.',
-        quotedPrice: 78250,
       },
     ],
-    quotedTotal: 78250,
   },
 ]
 
@@ -121,6 +107,38 @@ function writeDeletedQuoteIds(ids) {
   }
 }
 
+function normalizeCustomer(customer) {
+  if (!customer || typeof customer !== 'object') {
+    return { name: '', email: '', phone: '', company: '' }
+  }
+  return {
+    name: customer.name ?? '',
+    email: customer.email ?? '',
+    phone: customer.phone ?? '',
+    company: customer.company ?? '',
+  }
+}
+
+function normalizeQuote(quote, seedQuote = null) {
+  const normalized = {
+    ...quote,
+    customer: normalizeCustomer(quote.customer),
+    repliedAt: quote.repliedAt ?? null,
+  }
+
+  const seedCustomer = seedQuote ? normalizeCustomer(seedQuote.customer) : null
+  if (
+    seedCustomer &&
+    !normalized.customer.name &&
+    !normalized.customer.email &&
+    (seedCustomer.name || seedCustomer.email)
+  ) {
+    normalized.customer = seedCustomer
+  }
+
+  return normalized
+}
+
 export function createQuoteRecord(requestId, payload, catalog, dealership = {}) {
   const items = payload.items.map((item) => {
     const vehicle = catalog.find((v) => v.id === item.vehicleId)
@@ -128,9 +146,7 @@ export function createQuoteRecord(requestId, payload, catalog, dealership = {}) 
       vehicleId: item.vehicleId,
       title: vehicle?.title ?? 'Unknown vehicle',
       vin: vehicle?.vin ?? '',
-      preUpfitPrice: vehicle?.preUpfitPrice ?? 0,
       instructions: item.instructions ?? '',
-      quotedPrice: null,
     }
   })
 
@@ -138,21 +154,21 @@ export function createQuoteRecord(requestId, payload, catalog, dealership = {}) 
     id: requestId,
     status: 'submitted',
     submittedAt: new Date().toISOString(),
-    quotedAt: null,
     dealershipId: dealership.id ?? null,
     dealershipName: dealership.name ?? '',
-    customer: { ...payload.customer },
+    customer: normalizeCustomer(payload.customer),
     items,
-    quotedTotal: null,
+    repliedAt: null,
   }
 }
 
 export async function fetchQuotes() {
   // TODO: return await fetch('/api/dealer/quotes').then(r => r.json())
   const stored = readStoredQuotes()
-  const byId = new Map(seedQuotes.map((quote) => [quote.id, quote]))
+  const seedById = new Map(seedQuotes.map((quote) => [quote.id, quote]))
+  const byId = new Map(seedQuotes.map((quote) => [quote.id, normalizeQuote(quote)]))
   for (const quote of stored) {
-    byId.set(quote.id, quote)
+    byId.set(quote.id, normalizeQuote(quote, seedById.get(quote.id)))
   }
   const deletedIds = new Set(readDeletedQuoteIds())
   return [...byId.values()]
@@ -164,10 +180,11 @@ export async function fetchQuotes() {
 
 export async function saveQuote(quote) {
   // TODO: return await fetch('/api/dealer/quotes', { method: 'POST', ... })
+  const normalized = normalizeQuote(quote)
   const stored = readStoredQuotes()
-  const without = stored.filter((q) => q.id !== quote.id)
-  writeStoredQuotes([quote, ...without])
-  return quote
+  const without = stored.filter((q) => q.id !== normalized.id)
+  writeStoredQuotes([normalized, ...without])
+  return normalized
 }
 
 export async function fetchQuoteById(id) {
@@ -175,36 +192,18 @@ export async function fetchQuoteById(id) {
   return quotes.find((q) => q.id === id) ?? null
 }
 
-export async function sendQuoteToCustomer(quoteId, { email, message }) {
-  // TODO: return await fetch(`/api/dealer/quotes/${quoteId}/send`, { method: 'POST', ... })
-  console.info('[dummy] Quote sent to customer:', { quoteId, email, message })
-  return { success: true, sentAt: new Date().toISOString() }
+export function isQuoteReplied(quote) {
+  return Boolean(quote?.repliedAt)
 }
 
-export async function submitUpfitterQuote(quoteId, response) {
-  // TODO: return await fetch(`/api/upfitter/quotes/${quoteId}/respond`, { method: 'POST', ... })
-  const { itemPrices, itemComments = {}, generalComment = '', estimatedReadyDate = null } = response
+export async function setQuoteReplied(quoteId, replied) {
+  // TODO: return await fetch(`/api/upfitter/quotes/${quoteId}/replied`, { method: 'PATCH', ... })
   const quotes = await fetchQuotes()
   const quote = quotes.find((q) => q.id === quoteId)
   if (!quote) return null
 
-  let quotedTotal = 0
-  for (const item of quote.items) {
-    const price = itemPrices[item.vehicleId]
-    if (price != null) {
-      item.quotedPrice = Number(price)
-      quotedTotal += item.quotedPrice
-    }
-    item.upfitterComment = itemComments[item.vehicleId]?.trim() ?? ''
-  }
-
-  quote.status = 'quoted'
-  quote.quotedAt = new Date().toISOString()
-  quote.quotedTotal = quotedTotal
-  quote.generalComment = generalComment.trim()
-  quote.estimatedReadyDate = estimatedReadyDate || null
-  await saveQuote(quote)
-  return quote
+  quote.repliedAt = replied ? new Date().toISOString() : null
+  return saveQuote(quote)
 }
 
 export async function deleteQuotesForDealership(dealershipId) {
@@ -254,4 +253,35 @@ export function formatQuoteId(id) {
   if (!id) return '—'
   const num = id.replace(/\D/g, '').slice(-4)
   return num || id
+}
+
+export function addBusinessDays(iso, days) {
+  const date = new Date(iso)
+  let added = 0
+  while (added < days) {
+    date.setDate(date.getDate() + 1)
+    const day = date.getDay()
+    if (day !== 0 && day !== 6) added += 1
+  }
+  return date
+}
+
+export function getReplyByDate(submittedAt, responseDays = 3) {
+  if (!submittedAt) return null
+  return addBusinessDays(submittedAt, responseDays)
+}
+
+export function formatReplyByDate(submittedAt, responseDays = 3) {
+  const date = getReplyByDate(submittedAt, responseDays)
+  if (!date) return '—'
+  return formatQuoteDateLong(date.toISOString())
+}
+
+export function isReplyOverdue(submittedAt, responseDays = 3) {
+  const replyBy = getReplyByDate(submittedAt, responseDays)
+  if (!replyBy) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  replyBy.setHours(0, 0, 0, 0)
+  return replyBy < today
 }

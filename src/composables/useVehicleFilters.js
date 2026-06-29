@@ -1,14 +1,14 @@
 import { ref, computed } from 'vue'
-import { getPriceRangeIds, vehicleMatchesPriceRange } from '../data/vehicles.js'
+import { filterOptions } from '../data/vehicles.js'
 import { useInventorySearch } from './useInventorySearch.js'
 
 const defaultFilters = () => ({
-  make: 'Ford',
+  makes: [...filterOptions.makes],
   colors: ['white', 'silver'],
-  truckTypes: ['Cab Chassis', 'Van'],
+  truckTypes: [...filterOptions.truckTypes],
+  bodyTypes: [...filterOptions.bodyTypes],
   rearWheels: ['SRW', 'DRW'],
   drives: ['4x2', '4x4'],
-  priceRanges: getPriceRangeIds(),
 })
 
 export function useVehicleFilters(vehicles) {
@@ -18,19 +18,14 @@ export function useVehicleFilters(vehicles) {
 
   const filteredVehicles = computed(() => {
     let results = vehicles.value.filter((vehicle) => {
-      const { make, colors, truckTypes, rearWheels, drives, priceRanges } = filters.value
+      const { makes, colors, truckTypes, bodyTypes, rearWheels, drives } = filters.value
 
-      if (make && vehicle.make !== make) return false
+      if (makes.length && !makes.includes(vehicle.make)) return false
       if (colors.length && !colors.includes(vehicle.color)) return false
       if (truckTypes.length && !truckTypes.includes(vehicle.truckType)) return false
+      if (bodyTypes.length && !bodyTypes.includes(vehicle.bodyType)) return false
       if (rearWheels.length && !rearWheels.includes(vehicle.rearWheel)) return false
       if (drives.length && !drives.includes(vehicle.drive)) return false
-      if (
-        priceRanges.length &&
-        !priceRanges.some((rangeId) => vehicleMatchesPriceRange(vehicle.preUpfitPrice, rangeId))
-      ) {
-        return false
-      }
 
       if (searchQuery.value.trim()) {
         const q = searchQuery.value.trim().toLowerCase()
@@ -50,20 +45,12 @@ export function useVehicleFilters(vehicles) {
       results = [...results].sort((a, b) => b.year - a.year)
     } else if (sortBy.value === 'year_asc') {
       results = [...results].sort((a, b) => a.year - b.year)
-    } else if (sortBy.value === 'price_asc') {
-      results = [...results].sort((a, b) => a.preUpfitPrice - b.preUpfitPrice)
-    } else if (sortBy.value === 'price_desc') {
-      results = [...results].sort((a, b) => b.preUpfitPrice - a.preUpfitPrice)
     }
 
     return results
   })
 
   const resultCount = computed(() => filteredVehicles.value.length)
-
-  function setMake(make) {
-    filters.value.make = make
-  }
 
   function toggleColor(colorId) {
     const colors = filters.value.colors
@@ -94,7 +81,6 @@ export function useVehicleFilters(vehicles) {
     sortBy,
     filteredVehicles,
     resultCount,
-    setMake,
     toggleColor,
     toggleArrayFilter,
     resetFilters,

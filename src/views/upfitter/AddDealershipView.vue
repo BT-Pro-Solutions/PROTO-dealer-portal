@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { availableBrands, createDealership } from '../../data/upfitter.js'
+import { availableBrands, availableTruckBodyStyles, createDealership } from '../../data/upfitter.js'
 
 const router = useRouter()
 
@@ -16,6 +16,7 @@ const form = ref({
   email: '',
   address: '',
   allowedBrands: [],
+  allowedTruckBodyStyles: [],
 })
 
 function toggleBrand(brand) {
@@ -25,6 +26,16 @@ function toggleBrand(brand) {
     brands.push(brand)
   } else {
     brands.splice(idx, 1)
+  }
+}
+
+function toggleTruckBodyStyle(style) {
+  const styles = form.value.allowedTruckBodyStyles
+  const idx = styles.indexOf(style)
+  if (idx === -1) {
+    styles.push(style)
+  } else {
+    styles.splice(idx, 1)
   }
 }
 
@@ -59,7 +70,7 @@ async function handleSubmit() {
 
     <h1 class="add-dealer__title reveal reveal--delay-1">Add dealership</h1>
     <p class="add-dealer__subtitle reveal reveal--delay-1">
-      Set up a new dealer partner with contact info and brand access.
+      Set up a new dealer partner with contact info, brand access, and truck body styles.
     </p>
 
     <form class="add-dealer__section reveal reveal--delay-2" @submit.prevent="handleSubmit">
@@ -112,6 +123,24 @@ async function handleSubmit() {
             @change="toggleBrand(brand)"
           />
           {{ brand }}
+        </label>
+      </div>
+
+      <h2 class="add-dealer__subheading">Truck body styles made available to this dealership</h2>
+      <div class="add-dealer__brands">
+        <label
+          v-for="style in availableTruckBodyStyles"
+          :key="style"
+          class="add-dealer__brand"
+          :class="{ 'add-dealer__brand--active': form.allowedTruckBodyStyles.includes(style) }"
+        >
+          <input
+            type="checkbox"
+            :checked="form.allowedTruckBodyStyles.includes(style)"
+            class="add-dealer__brand-check"
+            @change="toggleTruckBodyStyle(style)"
+          />
+          {{ style }}
         </label>
       </div>
 

@@ -36,7 +36,7 @@ const searchInputRef = ref(null)
 
 const navLinks = [
   { name: 'upfitter-dashboard', label: 'Dashboard' },
-  { name: 'upfitter-quotes', label: 'Quotes' },
+  { name: 'upfitter-quotes', label: 'Requests' },
   { name: 'upfitter-dealerships', label: 'My Dealers' },
 ]
 

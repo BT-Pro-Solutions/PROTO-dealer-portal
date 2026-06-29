@@ -1,12 +1,19 @@
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useUpfitterQuotes } from '../../composables/useUpfitterQuotes.js'
 import { useQuoteVehicleImages } from '../../composables/useQuoteVehicleImages.js'
-import { fetchQuoteById, formatQuoteDate } from '../../data/quotes.js'
-import { formatPrice } from '../../data/vehicles.js'
+import { useDealershipLookup } from '../../composables/useDealershipLookup.js'
+import {
+  fetchQuoteById,
+  formatQuoteDate,
+  formatReplyByDate,
+  isReplyOverdue,
+} from '../../data/quotes.js'
+import { upfitterSession } from '../../data/upfitter.js'
 import VehicleImagePlaceholder from '../../components/VehicleImagePlaceholder.vue'
+import QuoteRepliedToggle from '../../components/upfitter/QuoteRepliedToggle.vue'
 
 const props = defineProps({
   id: {
@@ -16,149 +23,133 @@ const props = defineProps({
 })
 
 const router = useRouter()
-const { loadQuotes, getQuote, respondToQuote } = useUpfitterQuotes()
+const { refreshQuotes } = useUpfitterQuotes()
 const { ensureCatalog, vehicleImage } = useQuoteVehicleImages()
+const { ensureLoaded, getDealership } = useDealershipLookup()
 
 const quote = ref(null)
 const loading = ref(true)
-const submitting = ref(false)
-const submitSuccess = ref(false)
-const submitError = ref(false)
-const itemPrices = reactive({})
-const itemComments = reactive({})
-const generalComment = ref('')
-const estimatedReadyDate = ref('')
 
-const isPending = computed(() => quote.value?.status === 'submitted')
-const subtotalPreUpfit = computed(
-  () => quote.value?.items.reduce((sum, item) => sum + (item.preUpfitPrice ?? 0), 0) ?? 0,
+const responseDays = upfitterSession.responseDays ?? 3
+
+const dealership = computed(() =>
+  quote.value?.dealershipId ? getDealership(quote.value.dealershipId) : null,
 )
-const quotedTotal = computed(() =>
-  Object.values(itemPrices).reduce((sum, price) => sum + (Number(price) || 0), 0),
+
+const replyByLabel = computed(() =>
+  quote.value ? formatReplyByDate(quote.value.submittedAt, responseDays) : '—',
 )
-const canSubmit = computed(() => {
-  if (!quote.value || !estimatedReadyDate.value) return false
-  return quote.value.items.every((item) => {
-    const price = itemPrices[item.vehicleId]
-    return price != null && price !== '' && Number(price) > 0
-  })
+
+const replyOverdue = computed(() =>
+  quote.value && !quote.value.repliedAt
+    ? isReplyOverdue(quote.value.submittedAt, responseDays)
+    : false,
+)
+
+const customer = computed(() => quote.value?.customer ?? null)
+
+const hasCustomerDetails = computed(() => {
+  if (!customer.value) return false
+  return Boolean(
+    customer.value.name ||
+    customer.value.email ||
+    customer.value.phone ||
+    customer.value.company,
+  )
 })
 
+function handleRepliedUpdate(updated) {
+  quote.value = updated
+}
+
 onMounted(async () => {
-  await Promise.all([loadQuotes(), ensureCatalog()])
-  quote.value = getQuote(props.id) ?? (await fetchQuoteById(props.id))
+  await Promise.all([refreshQuotes(), ensureCatalog(), ensureLoaded()])
+  quote.value = await fetchQuoteById(props.id)
   loading.value = false
 
   if (!quote.value) {
     router.replace({ name: 'upfitter-quotes' })
-    return
   }
-
-  for (const item of quote.value.items) {
-    itemPrices[item.vehicleId] = item.quotedPrice ?? ''
-    itemComments[item.vehicleId] = item.upfitterComment ?? ''
-  }
-  generalComment.value = quote.value.generalComment ?? ''
-  estimatedReadyDate.value = quote.value.estimatedReadyDate ?? ''
 })
-
-async function handleSubmitQuote() {
-  if (!quote.value || !canSubmit.value || submitting.value) return
-
-  submitting.value = true
-  submitSuccess.value = false
-  submitError.value = false
-
-  try {
-    const prices = {}
-    const comments = {}
-    for (const item of quote.value.items) {
-      prices[item.vehicleId] = Number(itemPrices[item.vehicleId])
-      comments[item.vehicleId] = itemComments[item.vehicleId]
-    }
-    quote.value = await respondToQuote(quote.value.id, {
-      itemPrices: prices,
-      itemComments: comments,
-      generalComment: generalComment.value,
-      estimatedReadyDate: estimatedReadyDate.value,
-    })
-    submitSuccess.value = true
-  } catch {
-    submitError.value = true
-  } finally {
-    submitting.value = false
-  }
-}
 </script>
 
 <template>
   <div v-if="loading" class="quote-detail page-content page-content--narrow">
-    <p class="quote-detail__loading">Loading quote request…</p>
+    <p class="quote-detail__loading">Loading information request…</p>
   </div>
 
   <div v-else-if="quote" class="quote-detail page-content page-content--narrow">
     <RouterLink :to="{ name: 'upfitter-quotes' }" class="quote-detail__back reveal">
       <Icon icon="mdi:arrow-left" width="18" height="18" aria-hidden="true" />
-      Back to quote requests
+      Back to information requests
     </RouterLink>
 
     <div class="quote-detail__header reveal reveal--delay-1">
       <div>
-        <h1 class="quote-detail__title">{{ quote.id }}</h1>
-        <p class="quote-detail__dealer">{{ quote.dealershipName }}</p>
+        <h1 class="quote-detail__dealer-title">
+          {{ dealership?.name ?? quote.dealershipName }}
+        </h1>
+        <p class="quote-detail__request-id">{{ quote.id }}</p>
       </div>
-      <span
-        class="quote-detail__status"
-        :class="isPending ? 'quote-detail__status--pending' : 'quote-detail__status--quoted'"
+      <div
+        class="quote-detail__reply-by"
+        :class="{
+          'quote-detail__reply-by--overdue': replyOverdue,
+          'quote-detail__reply-by--replied': quote.repliedAt,
+        }"
       >
-        {{ isPending ? 'Pending' : 'Quoted' }}
-      </span>
+        <template v-if="quote.repliedAt">
+          <span class="quote-detail__reply-by-label">Replied</span>
+          <span class="quote-detail__reply-by-date">{{ formatQuoteDate(quote.repliedAt) }}</span>
+        </template>
+        <template v-else>
+          <span class="quote-detail__reply-by-label">Reply by</span>
+          <span class="quote-detail__reply-by-date">{{ replyByLabel }}</span>
+          <span v-if="replyOverdue" class="quote-detail__reply-by-note">Overdue</span>
+        </template>
+
+      <QuoteRepliedToggle
+        :quote-id="quote.id"
+        :replied-at="quote.repliedAt"
+        @update="handleRepliedUpdate"
+      />
+      </div>
     </div>
 
-    <div class="quote-detail__meta-grid reveal reveal--delay-2">
-      <section class="quote-detail__panel">
-        <h2 class="quote-detail__heading">Customer</h2>
-        <dl class="quote-detail__fields">
-          <div class="quote-detail__field">
-            <dt>Name</dt>
-            <dd>{{ quote.customer.name }}</dd>
-          </div>
-          <div class="quote-detail__field">
-            <dt>Email</dt>
-            <dd>{{ quote.customer.email }}</dd>
-          </div>
-          <div v-if="quote.customer.phone" class="quote-detail__field">
-            <dt>Phone</dt>
-            <dd>{{ quote.customer.phone }}</dd>
-          </div>
-          <div v-if="quote.customer.company" class="quote-detail__field">
-            <dt>Company</dt>
-            <dd>{{ quote.customer.company }}</dd>
-          </div>
-        </dl>
-      </section>
-
-      <section class="quote-detail__panel">
-        <h2 class="quote-detail__heading">Timeline</h2>
-        <dl class="quote-detail__fields">
-          <div class="quote-detail__field">
-            <dt>Submitted</dt>
-            <dd>{{ formatQuoteDate(quote.submittedAt) }}</dd>
-          </div>
-          <div class="quote-detail__field">
-            <dt>Quoted</dt>
-            <dd>{{ isPending ? 'Awaiting your response' : formatQuoteDate(quote.quotedAt) }}</dd>
-          </div>
-          <div v-if="!isPending && quote.estimatedReadyDate" class="quote-detail__field">
-            <dt>Est. ready</dt>
-            <dd>{{ formatQuoteDate(quote.estimatedReadyDate) }}</dd>
-          </div>
-        </dl>
-      </section>
-    </div>
+    <section class="quote-detail__dealer-panel reveal reveal--delay-2">
+      <h2 class="quote-detail__heading">Dealership contact</h2>
+      <dl class="quote-detail__dealer-fields">
+        <div class="quote-detail__dealer-field">
+          <dt>Contact</dt>
+          <dd>{{ dealership?.contactName ?? '—' }}</dd>
+        </div>
+        <div class="quote-detail__dealer-field">
+          <dt>Phone</dt>
+          <dd>
+            <a v-if="dealership?.phone" :href="`tel:${dealership.phone}`">{{ dealership.phone }}</a>
+            <span v-else>—</span>
+          </dd>
+        </div>
+        <div class="quote-detail__dealer-field">
+          <dt>Email</dt>
+          <dd>
+            <a v-if="dealership?.email" :href="`mailto:${dealership.email}`">{{ dealership.email }}</a>
+            <span v-else>—</span>
+          </dd>
+        </div>
+        <div v-if="dealership?.address" class="quote-detail__dealer-field quote-detail__dealer-field--wide">
+          <dt>Address</dt>
+          <dd>{{ dealership.address }}</dd>
+        </div>
+        <div class="quote-detail__dealer-field">
+          <dt>Submitted</dt>
+          <dd>{{ formatQuoteDate(quote.submittedAt) }}</dd>
+        </div>
+      </dl>
+    </section>
 
     <section class="quote-detail__section reveal reveal--delay-3">
-      <h2 class="quote-detail__heading">Vehicles &amp; pricing</h2>
+      <h2 class="quote-detail__heading">Vehicles</h2>
       <ul class="quote-detail__vehicles">
         <li v-for="item in quote.items" :key="item.vehicleId" class="quote-detail__vehicle">
           <div class="quote-detail__vehicle-image">
@@ -179,108 +170,36 @@ async function handleSubmitQuote() {
             <p v-if="item.instructions" class="quote-detail__vehicle-notes">
               <strong>Dealer notes:</strong> {{ item.instructions }}
             </p>
-
-            <label v-if="isPending" class="quote-detail__comment-label">
-              Your comment
-              <textarea
-                v-model="itemComments[item.vehicleId]"
-                class="quote-detail__textarea"
-                rows="2"
-                placeholder="Notes on upfit, lead time, options…"
-              ></textarea>
-            </label>
-            <p v-else-if="item.upfitterComment" class="quote-detail__vehicle-comment">
-              <strong>Your comment:</strong> {{ item.upfitterComment }}
-            </p>
-          </div>
-
-          <div class="quote-detail__vehicle-pricing">
-            <span class="quote-detail__vehicle-pre">{{ formatPrice(item.preUpfitPrice) }} pre-upfit</span>
-            <label v-if="isPending" class="quote-detail__price-input">
-              <span class="quote-detail__price-label">Quoted price</span>
-              <input
-                v-model="itemPrices[item.vehicleId]"
-                type="number"
-                min="0"
-                step="100"
-                class="quote-detail__input"
-                placeholder="0"
-              />
-            </label>
-            <span v-else-if="item.quotedPrice" class="quote-detail__vehicle-quoted">
-              {{ formatPrice(item.quotedPrice) }}
-            </span>
           </div>
         </li>
       </ul>
+    </section>
 
-      <div class="quote-detail__totals">
-        <div class="quote-detail__total-row">
-          <span>Pre-upfit subtotal</span>
-          <span>{{ formatPrice(subtotalPreUpfit) }}</span>
+    <details class="quote-detail__customer" open>
+      <summary class="quote-detail__customer-summary">End customer reference</summary>
+      <p v-if="!hasCustomerDetails" class="quote-detail__customer-empty">
+        No end customer details were included with this request.
+      </p>
+      <dl v-else class="quote-detail__customer-fields">
+        <div v-if="customer.name" class="quote-detail__customer-field">
+          <dt>Name</dt>
+          <dd>{{ customer.name }}</dd>
         </div>
-        <div class="quote-detail__total-row quote-detail__total-row--quoted">
-          <span>{{ isPending ? 'Proposed total' : 'Quoted total' }}</span>
-          <span>{{ formatPrice(isPending ? quotedTotal : quote.quotedTotal) }}</span>
+        <div v-if="customer.email" class="quote-detail__customer-field">
+          <dt>Email</dt>
+          <dd>{{ customer.email }}</dd>
         </div>
-      </div>
-    </section>
+        <div v-if="customer.phone" class="quote-detail__customer-field">
+          <dt>Phone</dt>
+          <dd>{{ customer.phone }}</dd>
+        </div>
+        <div v-if="customer.company" class="quote-detail__customer-field">
+          <dt>Company</dt>
+          <dd>{{ customer.company }}</dd>
+        </div>
+      </dl>
+    </details>
 
-    <section v-if="isPending" class="quote-detail__section quote-detail__section--submit reveal reveal--delay-4">
-      <h2 class="quote-detail__heading">Submit quote</h2>
-
-      <div
-        v-if="submitSuccess"
-        class="quote-detail__message quote-detail__message--success"
-        role="status"
-      >
-        Quote submitted successfully. The dealership can now review your pricing.
-      </div>
-      <div
-        v-if="submitError"
-        class="quote-detail__message quote-detail__message--error"
-        role="status"
-      >
-        Unable to submit quote. Please try again.
-      </div>
-
-      <div class="quote-detail__submit-grid">
-        <label class="quote-detail__label">
-          Estimated ready date
-          <input
-            v-model="estimatedReadyDate"
-            type="date"
-            class="quote-detail__input quote-detail__input--date"
-            required
-          />
-        </label>
-
-        <label class="quote-detail__label quote-detail__label--full">
-          General comment
-          <textarea
-            v-model="generalComment"
-            class="quote-detail__textarea"
-            rows="3"
-            placeholder="Overall notes for the dealership — lead times, terms, follow-up…"
-          ></textarea>
-        </label>
-      </div>
-
-      <button
-        type="button"
-        class="quote-detail__submit-btn"
-        :disabled="!canSubmit || submitting || submitSuccess"
-        @click="handleSubmitQuote"
-      >
-        <Icon icon="mdi:send" width="20" height="20" aria-hidden="true" />
-        {{ submitting ? 'Submitting…' : submitSuccess ? 'Quote submitted' : 'Submit quote to dealership' }}
-      </button>
-    </section>
-
-    <section v-else-if="quote.generalComment" class="quote-detail__section reveal reveal--delay-4">
-      <h2 class="quote-detail__heading">General comment</h2>
-      <p class="quote-detail__general-comment">{{ quote.generalComment }}</p>
-    </section>
   </div>
 </template>
 
@@ -313,52 +232,101 @@ async function handleSubmitQuote() {
   margin-bottom: var(--space-lg);
 }
 
-.quote-detail__title {
+.quote-detail__dealer-title {
   margin: 0;
-  font-family: ui-monospace, monospace;
-  font-size: 1.35rem;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 900;
+  line-height: 1.15;
 }
 
-.quote-detail__dealer {
-  margin: 0.25rem 0 0;
+.quote-detail__request-id {
+  margin: 0.35rem 0 0;
+  font-family: ui-monospace, monospace;
   font-size: var(--text-sm);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-text-muted);
 }
 
-.quote-detail__status {
+.quote-detail__reply-by {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-pending);
+  border-radius: var(--radius-md);
+  text-align: right;
+}
+
+.quote-detail__reply-by--overdue {
+  background: var(--color-on-hold);
+}
+
+.quote-detail__reply-by--replied {
+  background: var(--color-available);
+}
+
+.quote-detail__reply-by--replied .quote-detail__reply-by-label {
+  color: #1a5c36;
+}
+
+.quote-detail__replied-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.quote-detail__replied-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.quote-detail__reply-by-label {
   font-size: var(--text-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 0.3rem 0.65rem;
-  border-radius: var(--radius-chip);
-}
-
-.quote-detail__status--pending {
-  background: var(--color-pending);
   color: var(--color-pending-text);
 }
 
-.quote-detail__status--quoted {
-  background: var(--color-available);
-  color: #1a5c36;
+.quote-detail__reply-by--overdue .quote-detail__reply-by-label {
+  color: #8b0000;
 }
 
-.quote-detail__meta-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-md);
-  margin-bottom: var(--space-md);
+.quote-detail__reply-by-date {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 900;
 }
 
-.quote-detail__panel,
+.quote-detail__reply-by-note {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8b0000;
+}
+
+.quote-detail__dealer-panel,
 .quote-detail__section {
   background: var(--color-bg-search);
   border-radius: var(--radius-md);
   padding: var(--space-lg);
   margin-bottom: var(--space-md);
+}
+
+.quote-detail__dealer-panel {
+  background: var(--color-bg-card);
+  color: #fff;
+}
+
+.quote-detail__section--note {
+  background: #f5f5f5;
+  color: inherit;
 }
 
 .quote-detail__heading {
@@ -367,30 +335,39 @@ async function handleSubmitQuote() {
   font-weight: 700;
 }
 
-.quote-detail__fields {
+.quote-detail__dealer-fields {
   display: grid;
-  gap: var(--space-sm);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
   margin: 0;
 }
 
-.quote-detail__field dt {
+.quote-detail__dealer-field--wide {
+  grid-column: 1 / -1;
+}
+
+.quote-detail__dealer-field dt {
   font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--color-text-muted);
-  margin-bottom: 0.1rem;
+  color: #ccc;
+  margin-bottom: 0.15rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
-.quote-detail__field dd {
+.quote-detail__dealer-field dd {
   margin: 0;
-  font-size: var(--text-sm);
-  font-weight: 500;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.quote-detail__dealer-field a {
+  color: #fff;
 }
 
 .quote-detail__vehicles {
   list-style: none;
-  margin: 0 0 var(--space-md);
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -399,7 +376,7 @@ async function handleSubmitQuote() {
 
 .quote-detail__vehicle {
   display: grid;
-  grid-template-columns: 120px 1fr auto;
+  grid-template-columns: 120px 1fr;
   gap: var(--space-md);
   padding: var(--space-md);
   background: #fff;
@@ -441,179 +418,62 @@ async function handleSubmitQuote() {
   color: var(--color-text-muted);
 }
 
-.quote-detail__vehicle-notes,
-.quote-detail__vehicle-comment {
+.quote-detail__vehicle-notes {
   margin: 0.35rem 0 0;
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   line-height: 1.45;
 }
 
-.quote-detail__vehicle-notes strong,
-.quote-detail__vehicle-comment strong {
+.quote-detail__vehicle-notes strong {
   color: var(--color-text);
 }
 
-.quote-detail__comment-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-top: var(--space-sm);
-  font-size: var(--text-xs);
+.quote-detail__customer {
+  background: #f8f8f8;
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-md);
+}
+
+.quote-detail__customer-summary {
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-text-muted);
+  cursor: pointer;
+  list-style: none;
 }
 
-.quote-detail__vehicle-pricing {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-xs);
-  flex-shrink: 0;
-  min-width: 130px;
+.quote-detail__customer-summary::-webkit-details-marker {
+  display: none;
 }
 
-.quote-detail__vehicle-pre {
-  font-size: var(--text-xs);
+.quote-detail__customer-empty {
+  margin: var(--space-md) 0 0;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
-.quote-detail__vehicle-quoted {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: var(--text-lg);
-}
-
-.quote-detail__price-input {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  align-items: flex-end;
-  width: 100%;
-}
-
-.quote-detail__price-label {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--color-text-muted);
-}
-
-.quote-detail__input {
-  width: 100%;
-  padding: 0.45rem 0.6rem;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  text-align: right;
-}
-
-.quote-detail__input--date {
-  text-align: left;
-  max-width: 220px;
-}
-
-.quote-detail__input:focus,
-.quote-detail__textarea:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.quote-detail__textarea {
-  width: 100%;
-  padding: 0.5rem 0.65rem;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: var(--radius-sm);
-  background: #fff;
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  resize: vertical;
-  min-height: 52px;
-}
-
-.quote-detail__totals {
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  padding-top: var(--space-sm);
-}
-
-.quote-detail__total-row {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-md);
-  font-size: var(--text-sm);
-  margin-bottom: 0.25rem;
-}
-
-.quote-detail__total-row--quoted {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: var(--text-base);
-  margin-top: 0.25rem;
-  margin-bottom: 0;
-}
-
-.quote-detail__section--submit {
-  padding-bottom: var(--space-lg);
-}
-
-.quote-detail__submit-grid {
+.quote-detail__customer-fields {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-md);
-  margin-bottom: var(--space-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-sm) var(--space-md);
+  margin: var(--space-md) 0 0;
 }
 
-.quote-detail__label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  font-size: var(--text-sm);
+.quote-detail__customer-field dt {
+  font-size: var(--text-xs);
   font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 0.1rem;
 }
 
-.quote-detail__label--full {
-  grid-column: 1 / -1;
-}
-
-.quote-detail__message {
-  margin-bottom: var(--space-md);
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-sm);
+.quote-detail__customer-field dd {
+  margin: 0;
   font-size: var(--text-sm);
-  font-weight: 500;
 }
 
-.quote-detail__message--success {
-  background: var(--color-available);
-}
-
-.quote-detail__message--error {
-  background: var(--color-on-hold);
-}
-
-.quote-detail__submit-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--brand-color);
-  color: var(--color-text-inverse);
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--text-sm);
-  padding: 0.75rem 1.25rem;
-  border-radius: var(--radius-sm);
-}
-
-.quote-detail__submit-btn:hover:not(:disabled) {
-  opacity: 0.85;
-}
-
-.quote-detail__submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.quote-detail__general-comment {
+.quote-detail__note {
   margin: 0;
   font-size: var(--text-sm);
   line-height: 1.5;
@@ -621,8 +481,8 @@ async function handleSubmitQuote() {
 }
 
 @media (max-width: 640px) {
-  .quote-detail__meta-grid,
-  .quote-detail__submit-grid {
+  .quote-detail__dealer-fields,
+  .quote-detail__customer-fields {
     grid-template-columns: 1fr;
   }
 
@@ -635,8 +495,10 @@ async function handleSubmitQuote() {
     height: 160px;
   }
 
-  .quote-detail__vehicle-pricing {
-    align-items: stretch;
+  .quote-detail__reply-by {
+    align-items: flex-start;
+    text-align: left;
+    width: 100%;
   }
 }
 </style>

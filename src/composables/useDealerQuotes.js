@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { fetchQuotes, saveQuote, createQuoteRecord } from '../data/quotes.js'
 
 const quotes = ref([])
@@ -22,10 +22,6 @@ function refreshQuotes() {
 }
 
 export function useDealerQuotes() {
-  const pendingCount = computed(
-    () => quotes.value.filter((quote) => quote.status === 'submitted').length,
-  )
-
   async function loadQuotes() {
     return ensureLoaded()
   }
@@ -43,7 +39,6 @@ export function useDealerQuotes() {
 
   return {
     quotes,
-    pendingCount,
     loadQuotes,
     refreshQuotes,
     registerQuote,

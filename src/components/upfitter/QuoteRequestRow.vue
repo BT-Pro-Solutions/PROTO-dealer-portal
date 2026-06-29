@@ -1,26 +1,45 @@
 <script setup>
-import { onMounted } from 'vue'
-import { formatQuoteDateLong, formatQuoteTime, formatQuoteId } from '../../data/quotes.js'
-import { formatPrice } from '../../data/vehicles.js'
+import { computed, onMounted } from 'vue'
+import { formatQuoteDate, formatQuoteId, formatReplyByDate, isQuoteReplied, isReplyOverdue } from '../../data/quotes.js'
+import { upfitterSession } from '../../data/upfitter.js'
 import { useQuoteVehicleImages } from '../../composables/useQuoteVehicleImages.js'
+import { useDealershipLookup } from '../../composables/useDealershipLookup.js'
+import QuoteRepliedToggle from './QuoteRepliedToggle.vue'
 import VehicleImagePlaceholder from '../VehicleImagePlaceholder.vue'
 
-defineProps({
+const props = defineProps({
   quote: {
     type: Object,
     required: true,
   },
 })
 
-const { ensureCatalog, quoteImages, baseValue } = useQuoteVehicleImages()
+const { ensureCatalog, quoteImages } = useQuoteVehicleImages()
+const { ensureLoaded, getDealership } = useDealershipLookup()
 
-onMounted(() => {
-  ensureCatalog()
+const responseDays = upfitterSession.responseDays ?? 3
+
+const dealership = computed(() => getDealership(props.quote.dealershipId))
+
+const replyByLabel = computed(() =>
+  formatReplyByDate(props.quote.submittedAt, responseDays),
+)
+
+const replyOverdue = computed(() =>
+  isReplyOverdue(props.quote.submittedAt, responseDays) && !isQuoteReplied(props.quote),
+)
+
+onMounted(async () => {
+  await Promise.all([ensureCatalog(), ensureLoaded()])
 })
 </script>
 
 <template>
-  <RouterLink :to="{ name: 'upfitter-quote-detail', params: { id: quote.id } }" class="quote-row">
+  <div
+    class="quote-row"
+    :class="{ 'quote-row--replied': isQuoteReplied(quote) }"
+  >
+    <RouterLink :to="{ name: 'upfitter-quote-detail', params: { id: quote.id } }" class="quote-row__link">
     <div class="quote-row__images">
       <div
         class="quote-row__image-stack"
@@ -44,45 +63,91 @@ onMounted(() => {
 
     <div class="quote-row__col quote-row__col--dealer">
       <span class="quote-row__dealer-name">{{ quote.dealershipName }}</span>
-      <span class="quote-row__quote-id">Quote Id {{ formatQuoteId(quote.id) }}</span>
+      <span v-if="dealership?.contactName" class="quote-row__dealer-contact">
+        {{ dealership.contactName }}
+      </span>
+      <span class="quote-row__dealer-meta">
+        <a
+          v-if="dealership?.phone"
+          :href="`tel:${dealership.phone}`"
+          class="quote-row__dealer-link"
+          @click.stop
+        >
+          {{ dealership.phone }}
+        </a>
+        <template v-if="dealership?.phone && dealership?.email"> · </template>
+        <a
+          v-if="dealership?.email"
+          :href="`mailto:${dealership.email}`"
+          class="quote-row__dealer-link"
+          @click.stop
+        >
+          {{ dealership.email }}
+        </a>
+      </span>
+      <span class="quote-row__quote-id">Request Id {{ formatQuoteId(quote.id) }}</span>
     </div>
 
     <div class="quote-row__col quote-row__col--vehicles">
       <span class="quote-row__vehicles-count">
         {{ quote.items.length }} Vehicle{{ quote.items.length === 1 ? '' : 's' }}
       </span>
-      <span class="quote-row__base-value">{{ formatPrice(baseValue(quote)) }} base value</span>
+      <span class="quote-row__submitted">
+        Submitted {{ formatQuoteDate(quote.submittedAt) }}
+      </span>
     </div>
 
-    <div class="quote-row__col quote-row__col--date">
-      <span class="quote-row__date">{{ formatQuoteDateLong(quote.submittedAt) }}</span>
-      <span class="quote-row__time">{{ formatQuoteTime(quote.submittedAt) }}</span>
-    </div>
-
-    <span
-      class="quote-row__action"
-      :class="quote.status === 'submitted' ? 'quote-row__action--review' : 'quote-row__action--view'"
+    <div
+      class="quote-row__col quote-row__col--date"
+      :class="{ 'quote-row__col--overdue': replyOverdue }"
     >
-      {{ quote.status === 'submitted' ? 'Review' : 'View' }}
-    </span>
-  </RouterLink>
+      <span class="quote-row__reply-label">Reply by</span>
+      <span class="quote-row__reply-date">{{ replyByLabel }}</span>
+      <span v-if="replyOverdue" class="quote-row__overdue">Overdue</span>
+    </div>
+    </RouterLink>
+
+    <QuoteRepliedToggle
+      :quote-id="quote.id"
+      :replied-at="quote.repliedAt"
+      compact
+      class="quote-row__replied"
+    />
+  </div>
 </template>
 
 <style scoped>
 .quote-row {
   display: grid;
-  grid-template-columns: 88px 1.4fr 1.2fr 1fr auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  gap: var(--space-lg);
+  gap: var(--space-md);
   padding: var(--space-lg) 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.quote-row--replied {
+  opacity: 0.72;
+}
+
+.quote-row__link {
+  display: grid;
+  grid-template-columns: 88px 1.6fr 1fr 1fr;
+  align-items: center;
+  gap: var(--space-lg);
+  min-width: 0;
   text-decoration: none;
   color: inherit;
   transition: background var(--transition-fast);
+  border-radius: var(--radius-sm);
 }
 
-.quote-row:hover {
+.quote-row__link:hover {
   background: rgba(0, 0, 0, 0.02);
+}
+
+.quote-row__replied {
+  flex-shrink: 0;
 }
 
 .quote-row__images {
@@ -153,14 +218,33 @@ onMounted(() => {
 
 .quote-row__dealer-name,
 .quote-row__vehicles-count,
-.quote-row__date {
+.quote-row__reply-date {
   font-weight: 700;
   font-size: var(--text-base);
 }
 
+.quote-row__dealer-contact {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.quote-row__dealer-meta {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.quote-row__dealer-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.quote-row__dealer-link:hover {
+  text-decoration: underline;
+}
+
 .quote-row__quote-id,
-.quote-row__base-value,
-.quote-row__time {
+.quote-row__submitted,
+.quote-row__reply-label {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
@@ -171,42 +255,38 @@ onMounted(() => {
   font-size: var(--text-xs);
 }
 
-.quote-row__action {
-  flex-shrink: 0;
-  padding: 0.55rem 1.75rem;
-  border-radius: var(--radius-pill);
-  font-family: var(--font-display);
+.quote-row__reply-label {
+  font-size: var(--text-xs);
   font-weight: 700;
-  font-size: var(--text-sm);
-  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
-.quote-row__action--review {
-  border: 2px solid var(--color-primary);
-  color: var(--color-primary);
-  background: #fff;
+.quote-row__col--overdue .quote-row__reply-date {
+  color: #8b0000;
 }
 
-.quote-row__action--view {
-  border: 2px solid #ccc;
-  color: #999;
-  background: #fff;
-}
-
-.quote-row:hover .quote-row__action--review {
-  background: var(--color-primary);
-  color: var(--color-text-inverse);
+.quote-row__overdue {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #8b0000;
 }
 
 @media (max-width: 900px) {
   .quote-row {
-    grid-template-columns: 72px 1fr auto;
-    grid-template-rows: auto auto;
+    grid-template-columns: 1fr auto;
+  }
+
+  .quote-row__link {
+    grid-template-columns: 72px 1fr;
+    grid-template-rows: auto auto auto;
     gap: var(--space-sm) var(--space-md);
   }
 
   .quote-row__images {
-    grid-row: 1 / 3;
+    grid-row: 1 / 4;
   }
 
   .quote-row__col--dealer {
@@ -222,27 +302,24 @@ onMounted(() => {
   }
 
   .quote-row__col--date {
-    display: none;
-  }
-
-  .quote-row__action {
-    grid-column: 3;
-    grid-row: 1 / 3;
-    align-self: center;
+    grid-column: 2;
+    grid-row: 3;
   }
 }
 
 @media (max-width: 540px) {
   .quote-row {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .quote-row__link {
     grid-template-columns: 64px 1fr;
     grid-template-rows: auto auto auto;
   }
 
-  .quote-row__action {
-    grid-column: 1 / -1;
-    grid-row: 3;
+  .quote-row__replied {
     justify-self: start;
-    margin-top: var(--space-xs);
   }
 }
 </style>

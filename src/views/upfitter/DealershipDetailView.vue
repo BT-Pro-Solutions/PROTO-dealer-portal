@@ -6,6 +6,7 @@ import {
   fetchDealershipById,
   updateDealership,
   availableBrands,
+  availableTruckBodyStyles,
   fetchDealershipUsers,
   fetchPendingUserRequests,
   createDealershipUser,
@@ -16,7 +17,8 @@ import {
   deleteDealership,
 } from '../../data/upfitter.js'
 import { useUpfitterQuotes } from '../../composables/useUpfitterQuotes.js'
-import { formatQuoteDate } from '../../data/quotes.js'
+import { formatReplyByDate, isReplyOverdue } from '../../data/quotes.js'
+import { upfitterSession } from '../../data/upfitter.js'
 
 const props = defineProps({
   id: {
@@ -55,6 +57,7 @@ const editForm = ref({
   email: '',
   address: '',
   allowedBrands: [],
+  allowedTruckBodyStyles: [],
 })
 
 const userForm = ref({
@@ -68,8 +71,10 @@ const dealershipQuotes = computed(() =>
 )
 
 const pendingQuotes = computed(() =>
-  dealershipQuotes.value.filter((q) => q.status === 'submitted'),
+  dealershipQuotes.value.filter((q) => q.status === 'submitted' && !q.repliedAt),
 )
+
+const responseDays = upfitterSession.responseDays ?? 3
 
 const dealerPortalUrl = computed(() =>
   router.resolve({ name: 'dealer-inventory' }).href,
@@ -106,6 +111,7 @@ onMounted(async () => {
     email: dealership.value.email,
     address: dealership.value.address,
     allowedBrands: [...dealership.value.allowedBrands],
+    allowedTruckBodyStyles: [...(dealership.value.allowedTruckBodyStyles ?? [])],
   }
 
   await Promise.all([loadUsers(), loadPendingRequests()])
@@ -125,6 +131,16 @@ function toggleBrand(brand) {
   }
 }
 
+function toggleTruckBodyStyle(style) {
+  const styles = editForm.value.allowedTruckBodyStyles
+  const idx = styles.indexOf(style)
+  if (idx === -1) {
+    styles.push(style)
+  } else {
+    styles.splice(idx, 1)
+  }
+}
+
 async function handleSave() {
   if (!dealership.value || saving.value) return
 
@@ -138,6 +154,7 @@ async function handleSave() {
       email: editForm.value.email.trim(),
       address: editForm.value.address.trim(),
       allowedBrands: [...editForm.value.allowedBrands],
+      allowedTruckBodyStyles: [...editForm.value.allowedTruckBodyStyles],
     })
     saveMessage.value = { type: 'success', text: 'Dealership updated.' }
   } catch {
@@ -245,7 +262,7 @@ async function handleDeleteDealer() {
   const quoteCount = dealershipQuotes.value.length
   const dealerName = dealership.value.name
   const confirmed = window.confirm(
-    `Final confirmation: permanently delete "${dealerName}" and all ${quoteCount} associated quote requests and invoices? This cannot be undone.`,
+    `Final confirmation: permanently delete "${dealerName}" and all ${quoteCount} associated information requests? This cannot be undone.`,
   )
   if (!confirmed) return
 
@@ -342,6 +359,24 @@ async function handleDeleteDealer() {
             @change="toggleBrand(brand)"
           />
           {{ brand }}
+        </label>
+      </div>
+
+      <h3 class="dealer-detail__subheading">Truck Body Styles Made Available to This Dealership</h3>
+      <div class="dealer-detail__brands">
+        <label
+          v-for="style in availableTruckBodyStyles"
+          :key="style"
+          class="dealer-detail__brand"
+          :class="{ 'dealer-detail__brand--active': editForm.allowedTruckBodyStyles.includes(style) }"
+        >
+          <input
+            type="checkbox"
+            :checked="editForm.allowedTruckBodyStyles.includes(style)"
+            class="dealer-detail__brand-check"
+            @change="toggleTruckBodyStyle(style)"
+          />
+          {{ style }}
         </label>
       </div>
 
@@ -459,9 +494,9 @@ async function handleDeleteDealer() {
 
     <section class="dealer-detail__section reveal reveal--delay-4">
       <div class="dealer-detail__section-header">
-        <h2 class="dealer-detail__heading">Quote requests</h2>
+        <h2 class="dealer-detail__heading">Information requests</h2>
         <span v-if="pendingQuotes.length" class="dealer-detail__pending-badge">
-          {{ pendingQuotes.length }} pending
+          {{ pendingQuotes.length }} new
         </span>
       </div>
 
@@ -474,19 +509,30 @@ async function handleDeleteDealer() {
             <div class="dealer-detail__quote-main">
               <span class="dealer-detail__quote-id">{{ quote.id }}</span>
               <span class="dealer-detail__quote-meta">
-                {{ quote.customer.name }} · {{ formatQuoteDate(quote.submittedAt) }}
+                {{ quote.items.length }} vehicle{{ quote.items.length === 1 ? '' : 's' }}
+                · Reply by {{ formatReplyByDate(quote.submittedAt, responseDays) }}
               </span>
             </div>
             <span
               class="dealer-detail__quote-status"
-              :class="quote.status === 'submitted' ? 'dealer-detail__quote-status--pending' : 'dealer-detail__quote-status--quoted'"
+              :class="{
+                'dealer-detail__quote-status--overdue':
+                  !quote.repliedAt && isReplyOverdue(quote.submittedAt, responseDays),
+                'dealer-detail__quote-status--replied': quote.repliedAt,
+              }"
             >
-              {{ quote.status === 'submitted' ? 'Pending' : 'Quoted' }}
+              {{
+                quote.repliedAt
+                  ? 'Replied'
+                  : isReplyOverdue(quote.submittedAt, responseDays)
+                    ? 'Overdue'
+                    : 'Received'
+              }}
             </span>
           </RouterLink>
         </li>
       </ul>
-      <p v-else class="dealer-detail__note">No quote requests from this dealership yet.</p>
+      <p v-else class="dealer-detail__note">No information requests from this dealership yet.</p>
     </section>
 
     <section class="dealer-detail__section dealer-detail__section--danger reveal reveal--delay-5">
@@ -498,7 +544,7 @@ async function handleDeleteDealer() {
 
       <ul class="dealer-detail__danger-summary">
         <li>{{ users.length }} portal {{ users.length === 1 ? 'user' : 'users' }}</li>
-        <li>{{ dealershipQuotes.length }} quote {{ dealershipQuotes.length === 1 ? 'request' : 'requests' }} and invoices</li>
+        <li>{{ dealershipQuotes.length }} information {{ dealershipQuotes.length === 1 ? 'request' : 'requests' }}</li>
         <li>{{ pendingRequests.length }} pending access {{ pendingRequests.length === 1 ? 'request' : 'requests' }}</li>
       </ul>
 
@@ -534,7 +580,7 @@ async function handleDeleteDealer() {
         <label class="dealer-detail__danger-check">
           <input v-model="deleteQuotesAcknowledged" type="checkbox" />
           <span>
-            I understand all {{ dealershipQuotes.length }} associated quote requests and invoices
+            I understand all {{ dealershipQuotes.length }} associated information requests
             will be permanently deleted.
           </span>
         </label>
@@ -1022,6 +1068,16 @@ async function handleDeleteDealer() {
 .dealer-detail__quote-status--quoted {
   background: var(--color-available);
   color: #1a5c36;
+}
+
+.dealer-detail__quote-status--replied {
+  background: var(--color-available);
+  color: #1a5c36;
+}
+
+.dealer-detail__quote-status--overdue {
+  background: var(--color-on-hold);
+  color: #8b0000;
 }
 
 .dealer-detail__section--danger {
