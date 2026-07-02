@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import VehicleImageGallery from '../../components/VehicleImageGallery.vue'
 import UpfitterPromo from '../../components/UpfitterPromo.vue'
-import { vehicleDetailFields, formatDetailValue } from '../../data/vehicles.js'
+import { vehicleDetailFields, formatDetailValue, getVehicleInvoiceUrl, getVehicleInvoiceFilename } from '../../data/vehicles.js'
 import { fetchUpfitterProfile } from '../../data/dealer.js'
 import { useVehicleSelection } from '../../composables/useVehicleSelection.js'
 import { flyCardToRequestButton } from '../../composables/useFlyToRequest.js'
@@ -35,6 +35,14 @@ const detailRows = computed(() => {
     value: formatDetailValue(vehicle.value, field),
   }))
 })
+
+const vehicleInvoiceUrl = computed(() =>
+  vehicle.value ? getVehicleInvoiceUrl(vehicle.value) : null,
+)
+
+const vehicleInvoiceFilename = computed(() =>
+  vehicle.value ? getVehicleInvoiceFilename(vehicle.value) : 'vehicle-invoice.pdf',
+)
 
 function goBack() {
   router.push({ name: 'dealer-inventory' })
@@ -106,6 +114,23 @@ function handleToggleQuote() {
             {{ isSelected(vehicle.id) ? 'Remove From Request' : 'Add To Request' }}
           </button>
         </div>
+
+        <section class="detail__documents reveal reveal--delay-2" aria-labelledby="vehicle-documents-heading">
+          <h2 id="vehicle-documents-heading" class="detail__documents-heading">Documents</h2>
+          <ul class="detail__documents-list">
+            <li>
+              <a
+                :href="vehicleInvoiceUrl"
+                :download="vehicleInvoiceFilename"
+                class="detail__document-btn"
+              >
+                <Icon icon="mdi:file-document-outline" width="20" height="20" aria-hidden="true" />
+                Vehicle Invoice
+              </a>
+            </li>
+          </ul>
+        </section>
+
         <UpfitterPromo v-if="upfitterProfile" :profile="upfitterProfile" />
       </div>
       
@@ -236,6 +261,45 @@ function handleToggleQuote() {
 
 .detail__select-btn:hover {
   opacity: 0.85;
+}
+
+.detail__documents {
+  margin-bottom: var(--space-xl);
+  padding: var(--space-xl);
+  background: var(--color-bg-card);
+  color: #fff;
+  border-radius: var(--radius-md);
+}
+
+.detail__documents-heading {
+  margin: 0 0 var(--space-md);
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+.detail__documents-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.detail__document-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text);
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.detail__document-btn:hover {
+  background: #f5f5f5;
+  border-color: var(--brand-color);
 }
 
 .detail__missing {

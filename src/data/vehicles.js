@@ -3,6 +3,8 @@
  * Replace fetchVehicles() with a real API call when backend is ready.
  */
 
+import { resolvePublicUrl } from '../utils/publicUrl.js'
+
 export const filterOptions = {
   makes: ['Ford', 'Chevrolet', 'Ram'],
   colors: [
@@ -186,4 +188,13 @@ export function formatDetailValue(vehicle, field) {
   if (raw == null || raw === '') return '—'
   if (field.suffix && raw !== 'N/A') return `${raw}${field.suffix}`
   return String(raw)
+}
+
+export function getVehicleInvoiceUrl(vehicle) {
+  // TODO: return vehicle-specific invoice URL from API
+  return resolvePublicUrl('/assets/documents/vehicle-invoice.pdf')
+}
+
+export function getVehicleInvoiceFilename(vehicle) {
+  return `vehicle-invoice-${vehicle.vin}.pdf`
 }
